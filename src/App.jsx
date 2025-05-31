@@ -11,10 +11,14 @@ const App = () => {
         {/* Default → redirect to /offer */}
         <Route path="/" element={<Navigate to="/offer" replace />} />
 
-        {/* Offer form for creating a new offer */}
+        {/* 
+          If no ID is passed, user creates a new offer (empty form).
+          If :offerId is present, OfferFormPage should fetch that draft and prefill. 
+        */}
         <Route path="/offer" element={<OfferFormPage />} />
+        <Route path="/offer/:offerId" element={<OfferFormPage />} />
 
-        {/* (Optional) Admin listing of past offers */}
+        {/* Admin listing of past offers/drafts */}
         <Route path="/admin/offers" element={<AdminOffersPage />} />
 
         {/* Catch-all: redirect back to /offer */}
