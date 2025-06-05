@@ -9,7 +9,9 @@ import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 
 import ProductRow from "../components/ProductRow";
+
 import NavBar from "../components/NavBar";
+
 
 import "react-datepicker/dist/react-datepicker.css";
 import "../assets/styles/pages/_offerFormPage.scss";
