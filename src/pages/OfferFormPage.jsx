@@ -11,9 +11,6 @@ import { doc, getDoc } from "firebase/firestore";
 import ProductRow from "../components/ProductRow";
 import NavBar from "../components/NavBar";
 
-import NavBar from "../components/NavBar";
-
-
 import "react-datepicker/dist/react-datepicker.css";
 import "../assets/styles/pages/_offerFormPage.scss";
 
@@ -117,17 +114,17 @@ export default function OfferFormPage() {
   ]);
   const [totalDiscount, setTotalDiscount] = useState(0);
 
-  // LINE TOTAL / SUBTOTAL HELPERS (same as before)
+  // LINE TOTAL / SUBTOTAL HELPERS
   const computeLineTotalNet = (item) => {
-    const qty = parseFloat(item.quantity) || 0;
-    const price = parseFloat(item.unitPrice) || 0;
-    const disc = parseFloat(item.discount) || 0;
+    const qty = Number(item.quantity) || 0;
+    const price = Number(item.unitPrice) || 0;
+    const disc = Number(item.discount) || 0;
     const discountedPrice = price * (1 - disc / 100);
     return qty * discountedPrice;
   };
   const computeLineTotalGross = (item) => {
     const net = computeLineTotalNet(item);
-    const vatRate = parseFloat(item.vat) || 0;
+    const vatRate = Number(item.vat) || 0;
     return net * (1 + vatRate / 100);
   };
   const computeSubTotal = () =>
@@ -141,14 +138,14 @@ export default function OfferFormPage() {
     }, 0);
   const computeSubTotalAfterDiscount = () => {
     const raw = computeSubTotal();
-    return raw * (1 - (parseFloat(totalDiscount) || 0) / 100);
+    return raw * (1 - (Number(totalDiscount) || 0) / 100);
   };
   const computeTotalVAT = () => {
     if (!useNetPrices) return 0;
     return items.reduce((sum, item) => {
       const netLine = computeLineTotalNet(item);
-      const netAfterGlobal = netLine * (1 - totalDiscount / 100);
-      const vatRate = parseFloat(item.vat) || 0;
+      const netAfterGlobal = netLine * (1 - (Number(totalDiscount) || 0) / 100);
+      const vatRate = Number(item.vat) || 0;
       return sum + netAfterGlobal * (vatRate / 100);
     }, 0);
   };
@@ -359,21 +356,29 @@ export default function OfferFormPage() {
       "Disc. (%)",
       "Line Total",
     ];
+
     const tableRows = items.map((item, idx) => {
-      const rawLineNet = computeLineTotalNet(item);
-      const rawLineGross = computeLineTotalGross(item);
+      // Convert string fields to numbers before formatting:
+      const qty = Number(item.quantity) || 0;
+      const price = Number(item.unitPrice) || 0;
+      const discPercent = Number(item.discount) || 0;
+      const vatPercent = Number(item.vat) || 0;
+
+      // Compute line totals:
+      const rawLineNet = qty * price * (1 - discPercent / 100);
+      const rawLineGross = rawLineNet * (1 + vatPercent / 100);
       const lineAfterGlobalDisc = useNetPrices
-        ? rawLineNet * (1 - totalDiscount / 100)
-        : rawLineGross * (1 - totalDiscount / 100);
+        ? rawLineNet * (1 - (Number(totalDiscount) || 0) / 100)
+        : rawLineGross * (1 - (Number(totalDiscount) || 0) / 100);
 
       return [
         idx + 1,
         item.productName,
-        item.quantity.toString(),
+        qty.toString(),
         item.unit,
-        item.unitPrice.toFixed(2) + " €",
-        item.vat + "%",
-        item.discount + "%",
+        price.toFixed(2) + " €",
+        vatPercent + "%",
+        discPercent + "%",
         lineAfterGlobalDisc.toFixed(2) + " €",
       ];
     });
@@ -428,10 +433,10 @@ export default function OfferFormPage() {
     );
     totalsY += 15;
 
-    if (parseFloat(totalDiscount) > 0) {
+    if (Number(totalDiscount) > 0) {
       doc.text(
         `Global Discount (${totalDiscount}%): -${(
-          rawSubtotal * (totalDiscount / 100)
+          rawSubtotal * (Number(totalDiscount) / 100)
         ).toFixed(2)} €`,
         totalsX,
         totalsY
@@ -455,7 +460,9 @@ export default function OfferFormPage() {
     doc.text(`Total: ${grandTotal.toFixed(2)} €`, totalsX, totalsY);
     doc.setFont(undefined, "normal");
 
-    // --- FOOTER TEXT ---
+    // ──────────────────────────────────────────────────────────────────────────
+    // FOOTER TEXT
+    // ──────────────────────────────────────────────────────────────────────────
     let footerY = totalsY + 40;
     doc.setFontSize(10).setTextColor("#333");
     const footerLines = doc.splitTextToSize(
@@ -465,7 +472,9 @@ export default function OfferFormPage() {
     doc.text(footerLines, margin, footerY);
     footerY += footerLines.length * 12 + 20;
 
-    // --- MORE OPTIONS SUMMARY ---
+    // ──────────────────────────────────────────────────────────────────────────
+    // MORE OPTIONS SUMMARY
+    // ──────────────────────────────────────────────────────────────────────────
     doc.setFontSize(9).setTextColor("#555");
     doc.text("----- More Options -----", margin, footerY);
     footerY += 12;
@@ -485,7 +494,9 @@ export default function OfferFormPage() {
     if (reverseCharge) vatLine = "Reverse charge (§13b UStG)";
     doc.text(`VAT Option: ${vatLine}`, margin, footerY);
 
-    // --- DOWNLOAD PDF ---
+    // ──────────────────────────────────────────────────────────────────────────
+    // DOWNLOAD PDF
+    // ──────────────────────────────────────────────────────────────────────────
     doc.save(`Angebot-${offerNumber || "new"}.pdf`);
   };
 
@@ -503,8 +514,8 @@ export default function OfferFormPage() {
     const validItems = items.filter(
       (it) =>
         it.productName.trim() &&
-        parseFloat(it.quantity) > 0 &&
-        parseFloat(it.unitPrice) >= 0
+        Number(it.quantity) > 0 &&
+        Number(it.unitPrice) >= 0
     );
     if (validItems.length === 0) {
       alert(
@@ -727,7 +738,6 @@ export default function OfferFormPage() {
           </div>
 
           {/* Item Rows */}
-
           {items.map((item, idx) => (
             <ProductRow
               key={item.id}
@@ -744,6 +754,7 @@ export default function OfferFormPage() {
               computeLineTotalGross={computeLineTotalGross}
             />
           ))}
+
           {/* Footer Links */}
           <div className="products-footer-links">
             <button type="button" className="add-link" onClick={handleAddItem}>
@@ -781,7 +792,7 @@ export default function OfferFormPage() {
                 {computeSubTotal().toFixed(2)} €
               </div>
             </div>
-            {parseFloat(totalDiscount) > 0 && (
+            {Number(totalDiscount) > 0 && (
               <div className="totals-row">
                 <div className="totals-label">
                   Subtotal (after {totalDiscount}% disc.):

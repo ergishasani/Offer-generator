@@ -51,3 +51,38 @@
 [debug] [2025-06-02T15:26:19.558Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
 [debug] [2025-06-02T15:26:19.558Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
 [info] [Firebase Plugin] Stopping Data Connect toolkit
+[debug] [2025-06-05T15:42:24.589Z] [Firebase Plugin] Activating Firebase extension.
+[debug] [2025-06-05T15:42:24.914Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-06-05T15:42:24.915Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-05T15:42:24.915Z] > authorizing via signed-in user (ergis.hasani2003@gmail.com)
+[debug] [2025-06-05T15:42:24.918Z] Checked if tokens are valid: true, expires at: 1749141685354
+[debug] [2025-06-05T15:42:24.918Z] Checked if tokens are valid: true, expires at: 1749141685354
+[debug] [2025-06-05T15:42:24.918Z] [Firebase Plugin] User found:  ergis.hasani2003@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2025-06-05T15:42:24.919Z] Checked if tokens are valid: true, expires at: 1749141685354
+[debug] [2025-06-05T15:42:24.921Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2025-06-05T15:42:24.928Z] [Firebase Plugin] VSCode notification server listening on port 40001
+[debug] [2025-06-05T15:42:25.462Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2025-06-05T15:42:25.462Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[debug] [2025-06-05T15:42:32.042Z] [Firebase Plugin] Value of process.env.MONOSPACE_ENV: undefined
+[debug] [2025-06-05T15:42:32.042Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-06-05T15:42:32.043Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-05T15:42:32.044Z] > authorizing via signed-in user (ergis.hasani2003@gmail.com)
+[debug] [2025-06-05T15:42:32.044Z] Checked if tokens are valid: true, expires at: 1749141685354
+[debug] [2025-06-05T15:42:32.044Z] [Firebase Plugin] User found:  ergis.hasani2003@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2025-06-05T15:42:32.045Z] Checked if tokens are valid: true, expires at: 1749141685354
+[debug] [2025-06-05T15:42:32.046Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2025-06-05T15:42:32.053Z] [Firebase Plugin] Value of process.env.MONOSPACE_ENV: undefined
+[debug] [2025-06-05T15:42:32.054Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-06-05T15:42:32.055Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-05T15:42:32.055Z] > authorizing via signed-in user (ergis.hasani2003@gmail.com)
+[debug] [2025-06-05T15:42:32.055Z] Checked if tokens are valid: true, expires at: 1749141685354
+[debug] [2025-06-05T15:42:32.055Z] [Firebase Plugin] User found:  ergis.hasani2003@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2025-06-05T15:42:32.056Z] Checked if tokens are valid: true, expires at: 1749141685354
+[debug] [2025-06-05T15:42:32.056Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2025-06-05T15:42:32.555Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2025-06-05T15:42:32.556Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[debug] [2025-06-05T15:42:32.570Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2025-06-05T15:42:32.570Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
