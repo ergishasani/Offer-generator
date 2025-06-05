@@ -179,6 +179,9 @@ export default function ProfilePage() {
   return (
     <div className="profile-page">
       <h2>Company Profile</h2>
+      {user && (
+        <p className="logged-in-email">Logged in as {user.email}</p>
+      )}
       <form className="profile-form" onSubmit={handleSaveProfile}>
         {/* Company Name */}
         <div className="form-group">
