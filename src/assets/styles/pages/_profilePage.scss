@@ -13,6 +13,12 @@
     color: #4d90fe; // use the same primary blue
   }
 
+  .logged-in-email {
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    color: #555;
+  }
+
   .profile-form {
     display: flex;
     flex-direction: column;

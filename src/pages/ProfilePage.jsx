@@ -37,21 +37,7 @@ export default function ProfilePage() {
   const [website, setWebsite] = useState("");
   const [vatNumber, setVatNumber] = useState("");
 
-  // 1) Listen for Auth state; once we have a user, fetch profile
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        fetchProfile(currentUser.uid);
-      } else {
-        setUser(null);
-        setLoadingProfile(false);
-      }
-    });
-    return () => unsubscribe();
-  }, [auth, fetchProfile]);
-
-  // 2) Fetch existing profile from Firestore
+  // 1) Fetch existing profile from Firestore
   const fetchProfile = React.useCallback(
     async (uid) => {
       setLoadingProfile(true);
@@ -78,6 +64,20 @@ export default function ProfilePage() {
     },
     [db]
   );
+
+  // 2) Listen for Auth state; once we have a user, fetch profile
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        fetchProfile(currentUser.uid);
+      } else {
+        setUser(null);
+        setLoadingProfile(false);
+      }
+    });
+    return () => unsubscribe();
+  }, [auth, fetchProfile]);
 
   // 3) Handle logo file selection
   const handleLogoChange = (e) => {
@@ -179,6 +179,9 @@ export default function ProfilePage() {
   return (
     <div className="profile-page">
       <h2>Company Profile</h2>
+      {user && (
+        <p className="logged-in-email">Logged in as {user.email}</p>
+      )}
       <form className="profile-form" onSubmit={handleSaveProfile}>
         {/* Company Name */}
         <div className="form-group">
