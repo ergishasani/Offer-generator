@@ -11,9 +11,6 @@ import { doc, getDoc } from "firebase/firestore";
 import ProductRow from "../components/ProductRow";
 import NavBar from "../components/NavBar";
 
-import NavBar from "../components/NavBar";
-
-
 import "react-datepicker/dist/react-datepicker.css";
 import "../assets/styles/pages/_offerFormPage.scss";
 
@@ -371,7 +368,7 @@ export default function OfferFormPage() {
         item.productName,
         item.quantity.toString(),
         item.unit,
-        item.unitPrice.toFixed(2) + " €",
+        parseFloat(item.unitPrice).toFixed(2) + " €",
         item.vat + "%",
         item.discount + "%",
         lineAfterGlobalDisc.toFixed(2) + " €",
