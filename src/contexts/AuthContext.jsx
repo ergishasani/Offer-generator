@@ -3,8 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
@@ -30,18 +29,6 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
-  // 1b) Handle redirect sign-in results
-  useEffect(() => {
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result && result.user) {
-          setCurrentUser(result.user);
-        }
-      })
-      .catch((err) => {
-        console.error("Redirect sign-in error", err);
-      });
-  }, []);
 
   // 2) Email/Password Registration
   function registerWithEmail(email, password) {
@@ -53,14 +40,14 @@ export function AuthProvider({ children }) {
     return signInWithEmailAndPassword(auth, email, password);
   }
 
-  // 4) Sign in with Google (Redirect flow)
+  // 4) Sign in with Google
   function loginWithGoogle() {
-    return signInWithRedirect(auth, googleProvider);
+    return signInWithPopup(auth, googleProvider);
   }
 
-  // 5) Sign in with Apple (Redirect flow)
+  // 5) Sign in with Apple
   function loginWithApple() {
-    return signInWithRedirect(auth, appleProvider);
+    return signInWithPopup(auth, appleProvider);
   }
 
   // 6) Sign out

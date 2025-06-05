@@ -9,6 +9,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 
 import ProductRow from "../components/ProductRow";
+import NavBar from "../components/NavBar";
 
 import NavBar from "../components/NavBar";
 

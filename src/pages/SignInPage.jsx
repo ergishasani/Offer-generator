@@ -6,12 +6,12 @@ import "../assets/styles/pages/_signInPage.scss";
 
 export default function SignInPage() {
   const {
+    currentUser,
     registerWithEmail,
     loginWithEmail,
     loginWithGoogle,
     loginWithApple,
   } = useAuth();
-  const { currentUser } = useAuth();
   const navigate = useNavigate();
 
   const [isRegister, setIsRegister] = useState(false);
@@ -47,6 +47,7 @@ export default function SignInPage() {
     setError("");
     try {
       await loginWithGoogle();
+      navigate("/profile");
     } catch (err) {
       console.error("Google login error", err);
       setError(err.message);
@@ -57,6 +58,7 @@ export default function SignInPage() {
     setError("");
     try {
       await loginWithApple();
+      navigate("/profile");
     } catch (err) {
       console.error("Apple login error", err);
       setError(err.message);
