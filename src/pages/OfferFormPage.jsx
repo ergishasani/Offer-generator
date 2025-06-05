@@ -8,6 +8,9 @@ import { auth, db } from "../services/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 
+import ProductRow from "../components/ProductRow";
+import NavBar from "../components/NavBar";
+
 import "react-datepicker/dist/react-datepicker.css";
 import "../assets/styles/pages/_offerFormPage.scss";
 
@@ -193,6 +196,24 @@ export default function OfferFormPage() {
   const [taxFree, setTaxFree] = useState(false);
   const [reverseCharge, setReverseCharge] = useState(false);
 
+  // Helper to refresh the company profile on demand
+  const fetchLatestProfile = async () => {
+    const user = auth.currentUser;
+    if (!user) return null;
+    try {
+      const profileRef = doc(db, "users", user.uid, "companyProfile", "profile");
+      const snap = await getDoc(profileRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        setCompanyProfile(data);
+        return data;
+      }
+    } catch (err) {
+      console.error("Error refreshing company profile:", err);
+    }
+    return null;
+  };
+
   // ──────────────────────────────────────────────────────────────────────────────
   // 1) Fetch Company Profile Once User is Authenticated
   // ──────────────────────────────────────────────────────────────────────────────
@@ -223,7 +244,8 @@ export default function OfferFormPage() {
   // ──────────────────────────────────────────────────────────────────────────────
   // 2) Generate PDF (uses companyProfile & items from state)
   // ──────────────────────────────────────────────────────────────────────────────
-  const generatePDF = () => {
+  const generatePDF = async () => {
+    await fetchLatestProfile();
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 40;
@@ -346,7 +368,7 @@ export default function OfferFormPage() {
         item.productName,
         item.quantity.toString(),
         item.unit,
-        item.unitPrice.toFixed(2) + " €",
+        parseFloat(item.unitPrice).toFixed(2) + " €",
         item.vat + "%",
         item.discount + "%",
         lineAfterGlobalDisc.toFixed(2) + " €",
@@ -467,7 +489,7 @@ export default function OfferFormPage() {
   // ──────────────────────────────────────────────────────────────────────────────
   // FORM SUBMIT HANDLER
   // ──────────────────────────────────────────────────────────────────────────────
-  const handleSubmitForm = (e) => {
+  const handleSubmitForm = async (e) => {
     e.preventDefault();
     // Basic validation
     if (!contactName.trim() || !offerNumber.trim()) {
@@ -488,7 +510,7 @@ export default function OfferFormPage() {
       return;
     }
     // (You could save the offer to Firestore here if desired)
-    generatePDF();
+    await generatePDF();
   };
 
   // ──────────────────────────────────────────────────────────────────────────────
@@ -497,6 +519,7 @@ export default function OfferFormPage() {
   if (profileLoading) {
     return (
       <div className="offer-form-page">
+        <NavBar />
         <p>Loading company profile…</p>
       </div>
     );
@@ -504,6 +527,7 @@ export default function OfferFormPage() {
 
   return (
     <div className="offer-form-page">
+      <NavBar />
       {/* COMPANY HEADER */}
       {!profileLoading && (
         <div className="company-header">
@@ -700,127 +724,23 @@ export default function OfferFormPage() {
           </div>
 
           {/* Item Rows */}
-          {items.map((item, idx) => {
-            const rawLineNet = computeLineTotalNet(item);
-            const rawLineGross = computeLineTotalGross(item);
-            const lineAfterGlobalDisc = useNetPrices
-              ? rawLineNet * (1 - totalDiscount / 100)
-              : rawLineGross * (1 - totalDiscount / 100);
 
-            return (
-              <div className="products-table-row" key={item.id}>
-                <div className="col col-index">{idx + 1}.</div>
-
-                {/* PRODUCT DROPDOWN (instead of free-text input) */}
-                <div className="col col-product">
-                  <select
-                    className="select full-width"
-                    value={item.productName}
-                    onChange={(e) =>
-                      handleItemChange(item.id, "productName", e.target.value)
-                    }
-                  >
-                    <option value="">-- Select product --</option>
-                    {PRODUCT_LIST.map((prodName) => (
-                      <option key={prodName} value={prodName}>
-                        {prodName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="col col-qty">
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    className="input small-input"
-                    value={item.quantity}
-                    onChange={(e) =>
-                      handleItemChange(item.id, "quantity", e.target.value)
-                    }
-                  />
-                </div>
-
-                <div className="col col-unit">
-                  <select
-                    className="select small-select"
-                    value={item.unit}
-                    onChange={(e) =>
-                      handleItemChange(item.id, "unit", e.target.value)
-                    }
-                  >
-                    {UNIT_OPTIONS.map((u) => (
-                      <option key={u.value} value={u.value}>
-                        {u.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="col col-price">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    className="input small-input"
-                    value={item.unitPrice}
-                    onChange={(e) =>
-                      handleItemChange(item.id, "unitPrice", e.target.value)
-                    }
-                  />{" "}
-                  €
-                </div>
-
-                <div className="col col-vat">
-                  <select
-                    className="select small-select"
-                    value={item.vat}
-                    onChange={(e) =>
-                      handleItemChange(item.id, "vat", e.target.value)
-                    }
-                  >
-                    {VAT_OPTIONS.map((v) => (
-                      <option key={v.value} value={v.value}>
-                        {v.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="col col-discount">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="1"
-                    className="input small-input"
-                    value={item.discount}
-                    onChange={(e) =>
-                      handleItemChange(item.id, "discount", e.target.value)
-                    }
-                  />{" "}
-                  %
-                </div>
-
-                <div className="col col-amount">
-                  {lineAfterGlobalDisc.toFixed(2)} €
-                </div>
-
-                <div className="col col-action">
-                  <button
-                    type="button"
-                    className="icon-button delete-btn"
-                    onClick={() => handleRemoveItem(item.id)}
-                    title="Delete line"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-
+          {items.map((item, idx) => (
+            <ProductRow
+              key={item.id}
+              item={item}
+              index={idx}
+              productList={PRODUCT_LIST}
+              unitOptions={UNIT_OPTIONS}
+              vatOptions={VAT_OPTIONS}
+              useNetPrices={useNetPrices}
+              totalDiscount={totalDiscount}
+              onChange={handleItemChange}
+              onRemove={handleRemoveItem}
+              computeLineTotalNet={computeLineTotalNet}
+              computeLineTotalGross={computeLineTotalGross}
+            />
+          ))}
           {/* Footer Links */}
           <div className="products-footer-links">
             <button type="button" className="add-link" onClick={handleAddItem}>
