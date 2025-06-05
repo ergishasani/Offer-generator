@@ -1,6 +1,7 @@
 // src/pages/SignInPage.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import "../assets/styles/pages/_signInPage.scss";
 
 export default function SignInPage() {
@@ -10,11 +11,20 @@ export default function SignInPage() {
     loginWithGoogle,
     loginWithApple,
   } = useAuth();
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
 
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  // Navigate to the profile page once a user is authenticated
+  useEffect(() => {
+    if (currentUser) {
+      navigate("/profile");
+    }
+  }, [currentUser, navigate]);
 
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
@@ -25,6 +35,8 @@ export default function SignInPage() {
       } else {
         await loginWithEmail(email, password);
       }
+      // After successful email auth, go to profile
+      navigate("/profile");
     } catch (err) {
       console.error("Email auth error", err);
       setError(err.message);
