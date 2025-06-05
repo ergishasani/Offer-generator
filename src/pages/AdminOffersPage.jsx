@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { listAllDrafts } from "../services/offerService";
 import "../assets/styles/pages/_adminOffersPage.scss";
+import NavBar from "../components/NavBar";
 
 const AdminOffersPage = () => {
   const [offers, setOffers] = useState([]);
@@ -22,11 +23,17 @@ const AdminOffersPage = () => {
   }, []);
 
   if (loading) {
-    return <p>Loading offers…</p>;
+    return (
+      <div className="admin-offers-page">
+        <NavBar />
+        <p>Loading offers…</p>
+      </div>
+    );
   }
 
   return (
     <div className="admin-offers-page">
+      <NavBar />
       <h1>All Offers / Drafts</h1>
       {offers.length === 0 ? (
         <p>No offers found.</p>
