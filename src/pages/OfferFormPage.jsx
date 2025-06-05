@@ -10,6 +10,9 @@ import { doc, getDoc } from "firebase/firestore";
 
 import ProductRow from "../components/ProductRow";
 
+import NavBar from "../components/NavBar";
+
+
 import "react-datepicker/dist/react-datepicker.css";
 import "../assets/styles/pages/_offerFormPage.scss";
 
@@ -518,6 +521,7 @@ export default function OfferFormPage() {
   if (profileLoading) {
     return (
       <div className="offer-form-page">
+        <NavBar />
         <p>Loading company profile…</p>
       </div>
     );
@@ -525,6 +529,7 @@ export default function OfferFormPage() {
 
   return (
     <div className="offer-form-page">
+      <NavBar />
       {/* COMPANY HEADER */}
       {!profileLoading && (
         <div className="company-header">

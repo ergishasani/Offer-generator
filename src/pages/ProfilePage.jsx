@@ -14,6 +14,7 @@ import {
   getDownloadURL,
 } from "firebase/storage";
 import "../assets/styles/pages/_profilePage.scss";
+import NavBar from "../components/NavBar";
 
 export default function ProfilePage() {
 
@@ -160,6 +161,7 @@ export default function ProfilePage() {
   if (!user) {
     return (
       <div className="profile-page">
+        <NavBar />
         <p>Please log in to edit your company profile.</p>
       </div>
     );
@@ -167,6 +169,7 @@ export default function ProfilePage() {
   if (loadingProfile) {
     return (
       <div className="profile-page">
+        <NavBar />
         <p>Loading profile…</p>
       </div>
     );
@@ -174,6 +177,7 @@ export default function ProfilePage() {
 
   return (
     <div className="profile-page">
+      <NavBar />
       <h2>Company Profile</h2>
       {user && (
         <p className="logged-in-email">Logged in as {user.email}</p>
