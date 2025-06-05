@@ -3,8 +3,8 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInWithPopup,
   signInWithRedirect,
+  getRedirectResult,
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
@@ -28,6 +28,19 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
     return unsubscribe;
+  }, []);
+
+  // 1b) Handle redirect sign-in results
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result && result.user) {
+          setCurrentUser(result.user);
+        }
+      })
+      .catch((err) => {
+        console.error("Redirect sign-in error", err);
+      });
   }, []);
 
   // 2) Email/Password Registration
