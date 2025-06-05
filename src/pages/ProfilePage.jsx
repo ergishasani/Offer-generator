@@ -1,15 +1,14 @@
 // src/pages/ProfilePage.jsx
 import React, { useState, useEffect } from "react";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { auth, db, storage } from "../services/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import {
-  getFirestore,
   doc,
   getDoc,
   setDoc,
   updateDoc,
 } from "firebase/firestore";
 import {
-  getStorage,
   ref,
   uploadBytesResumable,
   getDownloadURL,
@@ -17,9 +16,6 @@ import {
 import "../assets/styles/pages/_profilePage.scss";
 
 export default function ProfilePage() {
-  const auth = getAuth();
-  const db = getFirestore();
-  const storage = getStorage();
 
   const [user, setUser] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);

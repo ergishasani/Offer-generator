@@ -4,9 +4,9 @@ import { useParams } from "react-router-dom";
 import DatePicker from "react-datepicker";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { auth, db } from "../services/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import {
-  getFirestore,
   doc,
   getDoc,
 } from "firebase/firestore";
@@ -35,8 +35,6 @@ const VAT_OPTIONS = [
 // ——————————————————————————————————————————————————————————————————————————
 export default function OfferFormPage() {
   const { offerId } = useParams();
-  const auth = getAuth();
-  const db = getFirestore();
 
   // ──────────────────────────────────────────────────────────────────────────────
   // COMPANY PROFILE STATE (fetched from Firestore)
