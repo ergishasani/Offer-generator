@@ -1,0 +1,123 @@
+.product-list {
+  background-color: #ffffff;
+  padding: 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  margin-bottom: 2rem;
+
+  h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .add-button {
+    background-color: #2563eb;
+    color: white;
+    padding: 0.5rem 1rem;
+    margin-bottom: 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .item-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    background-color: #f9fafb;
+  }
+
+  .item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .item-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+
+  .item-header input {
+    font-size: 1.1rem;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    background: transparent;
+    min-width: 150px;
+  }
+
+  .remove-button {
+    background: transparent;
+    border: none;
+    color: #dc2626;
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0.75rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+  }
+
+  input,
+  textarea,
+  select {
+    margin-top: 0.25rem;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+  }
+
+  .dim-row {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .subsection {
+    background-color: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .subsection h4 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    color: #1e3a8a;
+  }
+
+  .accessory-row,
+  .filling-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .remove-button-small {
+    background: transparent;
+    border: none;
+    color: #dc2626;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+
+  .add-button-small {
+    background-color: #10b981;
+    color: white;
+    padding: 0.3rem 0.6rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+}

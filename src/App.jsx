@@ -1,31 +1,58 @@
 // src/App.jsx
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import SignInPage from "./pages/SignInPage";
+import ProfilePage from "./pages/ProfilePage";
 import OfferFormPage from "./pages/OfferFormPage";
-import AdminOffersPage from "./pages/AdminOffersPage";
 
-const App = () => {
+function PrivateRoute({ children }) {
+  const { currentUser } = useAuth();
+  return currentUser ? children : <Navigate to="/signin" />;
+}
+
+export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Default → redirect to /offer */}
-        <Route path="/" element={<Navigate to="/offer" replace />} />
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Public */}
+          <Route path="/signin" element={<SignInPage />} />
 
-        {/* 
-          If no ID is passed, user creates a new offer (empty form).
-          If :offerId is present, OfferFormPage should fetch that draft and prefill. 
-        */}
-        <Route path="/offer" element={<OfferFormPage />} />
-        <Route path="/offer/:offerId" element={<OfferFormPage />} />
+          {/* Private */}
+          <Route
+            path="/profile"
+            element={
+              <PrivateRoute>
+                <ProfilePage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/offers/:offerId?"
+            element={
+              <PrivateRoute>
+                <OfferFormPage />
+              </PrivateRoute>
+            }
+          />
 
-        {/* Admin listing of past offers/drafts */}
-        <Route path="/admin/offers" element={<AdminOffersPage />} />
-
-        {/* Catch-all: redirect back to /offer */}
-        <Route path="*" element={<Navigate to="/offer" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Catch‐all redirects */}
+          <Route
+            path="*"
+            element={
+              <RequireRedirect />
+            }
+          />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
-};
+}
 
-export default App;
+// Redirect helper: if auth, → /offers/new, else → /signin
+function RequireRedirect() {
+  const { currentUser } = useAuth();
+  return currentUser ? <Navigate to="/offers/new" /> : <Navigate to="/signin" />;
+}
+// This component handles the redirection logic based on authentication state

@@ -12,7 +12,7 @@ const TermsSection = ({ expirationDate, notes, onChange }) => {
         <input
           type="date"
           value={expirationDate}
-          onChange={e => onChange("expirationDate", e.target.value)}
+          onChange={(e) => onChange("expirationDate", e.target.value)}
         />
       </label>
 
@@ -21,8 +21,8 @@ const TermsSection = ({ expirationDate, notes, onChange }) => {
         <textarea
           rows="3"
           value={notes}
-          onChange={e => onChange("notes", e.target.value)}
-          placeholder="Any special terms, payment instructions, etc."
+          onChange={(e) => onChange("notes", e.target.value)}
+          placeholder="E.g. Payment within 14 days, warranty details, etc."
         />
       </label>
     </section>

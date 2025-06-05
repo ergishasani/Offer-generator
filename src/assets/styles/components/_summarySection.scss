@@ -1,0 +1,55 @@
+.summary-section {
+  background-color: #ffffff;
+  padding: 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  margin-bottom: 2rem;
+
+  h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+
+    th,
+    td {
+      border: 1px solid #e5e7eb;
+      padding: 0.5rem;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f3f4f6;
+      font-weight: 600;
+    }
+  }
+
+  .totals {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.95rem;
+
+    div {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .grand-total {
+      font-weight: bold;
+      font-size: 1.1rem;
+      margin-top: 0.5rem;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #d1d5db;
+      margin: 0.5rem 0;
+    }
+  }
+}

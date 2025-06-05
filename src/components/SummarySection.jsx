@@ -2,50 +2,74 @@
 import React from "react";
 import "../assets/styles/components/_summarySection.scss";
 
-const SummarySection = ({ items, deliveryFee, installationFee, discount, calculateTotals }) => {
-  // We re‐compute lineTotals, subTotal, vat, total here:
+const SummarySection = ({
+  items,
+  deliveryFee,
+  installationFee,
+  calculateTotals,
+}) => {
+  // If deliveryFee or installationFee is undefined, default to 0
   const { items: computedItems, subTotal, vat, total } = calculateTotals({
     items,
-    deliveryFee,
-    installationFee,
-    discount,
+    deliveryFee: deliveryFee ?? 0,
+    installationFee: installationFee ?? 0,
   });
 
   return (
     <section className="summary-section">
-      <h2>Summary</h2>
+      <h2>Order Summary</h2>
 
       <table>
         <thead>
           <tr>
             <th>Type</th>
             <th>Description</th>
+            <th>W × H (mm)</th>
+            <th>Area (m²)</th>
             <th>Qty</th>
-            <th>Unit Price</th>
-            <th>Line Total</th>
+            <th>Unit Price (€)</th>
+            <th>Line Total (€)</th>
           </tr>
         </thead>
         <tbody>
           {computedItems.map((item, idx) => (
             <tr key={idx}>
-              <td>{item.type}</td>
-              <td>{item.description}</td>
-              <td>{item.quantity}</td>
-              <td>{item.unitPrice.toFixed(2)} €</td>
-              <td>{item.lineTotal.toFixed(2)} €</td>
+              <td>{item.type ?? "-"}</td>
+              <td>{item.description ?? "-"}</td>
+              <td>
+                {(item.width ?? 0).toString()} × {(item.height ?? 0).toString()}
+              </td>
+              <td>{((item.areaM2 ?? 0).toFixed(3)).toString()}</td>
+              <td>{(item.quantity ?? 0).toString()}</td>
+              <td>{((item.unitPrice ?? 0).toFixed(2)).toString()}</td>
+              <td>{((item.lineTotal ?? 0).toFixed(2)).toString()}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
       <div className="totals">
-        <div>Subtotal: {subTotal.toFixed(2)} €</div>
-        <div>VAT (19%): {vat.toFixed(2)} €</div>
-        <div>Delivery: {deliveryFee.toFixed(2)} €</div>
-        <div>Installation: {installationFee.toFixed(2)} €</div>
-        <div>Discount: −{discount.toFixed(2)} €</div>
+        <div>
+          <span>Subtotal:</span>
+          <span>{(subTotal ?? 0).toFixed(2)} €</span>
+        </div>
+        <div>
+          <span>VAT (19%):</span>
+          <span>{(vat ?? 0).toFixed(2)} €</span>
+        </div>
+        <div>
+          <span>Delivery Fee:</span>
+          <span>{((deliveryFee ?? 0).toFixed(2))} €</span>
+        </div>
+        <div>
+          <span>Installation Fee:</span>
+          <span>{((installationFee ?? 0).toFixed(2))} €</span>
+        </div>
         <hr />
-        <div className="grand-total">Total: {total.toFixed(2)} €</div>
+        <div className="grand-total">
+          <span>Grand Total:</span>
+          <span>{((total ?? 0).toFixed(2))} €</span>
+        </div>
       </div>
     </section>
   );

@@ -5,32 +5,33 @@ import "../assets/styles/components/_customerDetails.scss";
 const CustomerDetails = ({ values, onChange }) => {
   return (
     <section className="customer-details">
-      <h2>Customer Details</h2>
+      <h2>Customer Information</h2>
 
       <label>
-        Name:
+        Customer Name:
         <input
           type="text"
           value={values.customerName}
-          onChange={e => onChange("customerName", e.target.value)}
+          onChange={(e) => onChange("customerName", e.target.value)}
         />
       </label>
 
       <label>
-        Contact Info:
+        Contact (Email / Phone):
         <input
           type="text"
-          value={values.contactInfo}
-          onChange={e => onChange("contactInfo", e.target.value)}
+          value={values.customerContact}
+          onChange={(e) => onChange("customerContact", e.target.value)}
         />
       </label>
 
       <label>
         Delivery Address:
-        <input
-          type="text"
-          value={values.deliveryAddress}
-          onChange={e => onChange("deliveryAddress", e.target.value)}
+        <textarea
+          rows="2"
+          value={values.customerAddress}
+          onChange={(e) => onChange("customerAddress", e.target.value)}
+          placeholder="Street, ZIP, City, Country"
         />
       </label>
     </section>

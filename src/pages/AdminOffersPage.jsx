@@ -1,57 +1,57 @@
 // src/pages/AdminOffersPage.jsx
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import "../assets/styles/pages/_adminOffersPage.scss";
 import { listAllDrafts } from "../services/offerService";
+import "../assets/styles/pages/_adminOffersPage.scss";
 
 const AdminOffersPage = () => {
-  const [drafts, setDrafts] = useState([]);
+  const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchDrafts() {
+    async function fetchOffers() {
       try {
-        const allDrafts = await listAllDrafts();
-        setDrafts(allDrafts);
+        const all = await listAllDrafts();
+        setOffers(all);
       } catch (err) {
-        console.error("Error fetching drafts:", err);
+        console.error("Error loading offers:", err);
       } finally {
         setLoading(false);
       }
     }
-
-    fetchDrafts();
+    fetchOffers();
   }, []);
 
-  if (loading) return <p>Loading drafts…</p>;
+  if (loading) {
+    return <p>Loading offers…</p>;
+  }
 
   return (
     <div className="admin-offers-page">
-      <h1>Saved Drafts</h1>
-      {drafts.length === 0 ? (
-        <p>No drafts found.</p>
+      <h1>All Offers / Drafts</h1>
+      {offers.length === 0 ? (
+        <p>No offers found.</p>
       ) : (
         <table>
           <thead>
             <tr>
               <th>Offer ID</th>
-              <th>Customer</th>
-              <th>Last Saved</th>
-              <th>Edit</th>
+              <th>Status</th>
+              <th>Created At</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {drafts.map(draft => (
-              <tr key={draft.id}>
-                <td>{draft.id}</td>
-                <td>{draft.customerName}</td>
+            {offers.map((offer) => (
+              <tr key={offer.id}>
+                <td>{offer.id}</td>
+                <td>{offer.status ?? "―"}</td>
                 <td>
-                  {draft.offerDate
-                    ? draft.offerDate.toDate().toLocaleString()
-                    : "—"}
+                  {offer.createdAt?.toDate
+                    ? offer.createdAt.toDate().toLocaleString()
+                    : "―"}
                 </td>
                 <td>
-                  <Link to={`/offer/${draft.id}`}>Edit</Link>
+                  <a href={`/offer/${offer.id}`}>Edit / View</a>
                 </td>
               </tr>
             ))}

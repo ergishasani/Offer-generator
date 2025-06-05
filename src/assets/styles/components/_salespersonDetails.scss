@@ -1,5 +1,5 @@
-.terms-section {
-  background-color: #ffffff;
+.salesperson-details {
+  background-color: #f9fafb;
   padding: 1rem;
   border: 1px solid #d1d5db;
   border-radius: 4px;
@@ -7,7 +7,7 @@
 
   h2 {
     font-size: 1.25rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
   }
 
   label {
@@ -16,14 +16,13 @@
     margin-bottom: 0.75rem;
     font-weight: 500;
     font-size: 0.9rem;
-  }
 
-  input,
-  textarea {
-    margin-top: 0.25rem;
-    padding: 0.5rem;
-    font-size: 0.9rem;
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
+    input {
+      margin-top: 0.25rem;
+      padding: 0.5rem;
+      font-size: 0.9rem;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+    }
   }
 }

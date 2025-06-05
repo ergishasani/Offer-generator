@@ -1,5 +1,4 @@
 // src/services/offerService.js
-
 import { db } from "./firebase";
 import {
   doc,
@@ -8,8 +7,6 @@ import {
   updateDoc,
   collection,
   serverTimestamp,
-  query,
-  where,
   getDocs,
 } from "firebase/firestore";
 
@@ -17,9 +14,7 @@ import {
 const offersCol = collection(db, "offers");
 
 /**
- * Save or update a draft (with status: "draft").
- * If existingId is provided, updates that document; otherwise creates a new one.
- * Returns the document ID.
+ * Save or update a draft (status: "draft"). Returns the document ID.
  */
 export async function saveDraft(offerData, existingId = null) {
   try {
@@ -45,8 +40,6 @@ export async function saveDraft(offerData, existingId = null) {
 
 /**
  * Mark an offer as “submitted” in Firestore.
- * Does NOT upload any PDF anywhere yet; simply updates status & metadata.
- * offerData should include all fields you want to store (customer, items, totals, etc.).
  */
 export async function submitOfferMetadata(offerId, offerData) {
   try {
@@ -55,7 +48,6 @@ export async function submitOfferMetadata(offerId, offerData) {
       ...offerData,
       status: "submitted",
       submittedAt: serverTimestamp(),
-      pdfUrl: null, // placeholder until you implement Storage upload later
     });
   } catch (err) {
     console.error("Error marking offer submitted:", err);
@@ -64,16 +56,15 @@ export async function submitOfferMetadata(offerId, offerData) {
 }
 
 /**
- * Fetch one draft or submitted offer by ID.
- * Returns an object { id, ...fields } or null if not found.
+ * Fetch a single draft/offer by ID.
+ * Returns { id, ...data } or null if not found.
  */
 export async function getDraftById(offerId) {
   try {
     const docRef = doc(db, "offers", offerId);
     const snap = await getDoc(docRef);
     if (!snap.exists()) return null;
-    const data = snap.data();
-    return { id: snap.id, ...data };
+    return { id: snap.id, ...snap.data() };
   } catch (err) {
     console.error("Error fetching draft:", err);
     throw err;
@@ -81,19 +72,18 @@ export async function getDraftById(offerId) {
 }
 
 /**
- * List all drafts (documents where status === "draft").
- * Returns an array of { id, ...fields } for each matching document.
+ * List all drafts (or all offers). Returns an array of { id, ...data }.
  */
 export async function listAllDrafts() {
   try {
-    const q = query(offersCol, where("status", "==", "draft"));
-    const snap = await getDocs(q);
-    return snap.docs.map((docSnap) => ({
-      id: docSnap.id,
-      ...docSnap.data(),
-    }));
+    const querySnapshot = await getDocs(offersCol);
+    const results = [];
+    querySnapshot.forEach((docSnap) => {
+      results.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    return results;
   } catch (err) {
-    console.error("Error listing drafts:", err);
+    console.error("Error listing all drafts:", err);
     throw err;
   }
 }
