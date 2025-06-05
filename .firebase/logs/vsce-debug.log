@@ -12,3 +12,42 @@
 [debug] [2025-05-31T16:57:35.322Z] [Firebase Plugin] VSCode notification server listening on port 40001
 [debug] [2025-05-31T16:57:35.864Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
 [debug] [2025-05-31T16:57:35.865Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[info] [Firebase Plugin] Stopping Data Connect toolkit
+[debug] [2025-06-01T12:07:07.243Z] [Firebase Plugin] Activating Firebase extension.
+[debug] [2025-06-01T12:07:08.186Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-06-01T12:07:08.189Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-01T12:07:08.189Z] > authorizing via signed-in user (ergis.hasani2003@gmail.com)
+[debug] [2025-06-01T12:07:08.195Z] Checked if tokens are valid: false, expires at: 1748714010478
+[debug] [2025-06-01T12:07:08.195Z] Checked if tokens are valid: false, expires at: 1748714010478
+[debug] [2025-06-01T12:07:08.196Z] > refreshing access token with scopes: []
+[debug] [2025-06-01T12:07:08.197Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-06-01T12:07:08.198Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-06-01T12:07:08.212Z] [Firebase Plugin] VSCode notification server listening on port 40001
+[debug] [2025-06-01T12:07:08.580Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-06-01T12:07:08.581Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-06-01T12:07:08.612Z] [Firebase Plugin] User found:  ergis.hasani2003@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2025-06-01T12:07:08.613Z] Checked if tokens are valid: true, expires at: 1748783227581
+[debug] [2025-06-01T12:07:08.615Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2025-06-01T12:07:09.183Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2025-06-01T12:07:09.184Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[info] [Firebase Plugin] Stopping Data Connect toolkit
+[debug] [2025-06-02T15:26:18.183Z] [Firebase Plugin] Activating Firebase extension.
+[debug] [2025-06-02T15:26:18.626Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-06-02T15:26:18.627Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-02T15:26:18.627Z] > authorizing via signed-in user (ergis.hasani2003@gmail.com)
+[debug] [2025-06-02T15:26:18.630Z] Checked if tokens are valid: false, expires at: 1748783227581
+[debug] [2025-06-02T15:26:18.631Z] Checked if tokens are valid: false, expires at: 1748783227581
+[debug] [2025-06-02T15:26:18.631Z] > refreshing access token with scopes: []
+[debug] [2025-06-02T15:26:18.633Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-06-02T15:26:18.633Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-06-02T15:26:18.641Z] [Firebase Plugin] VSCode notification server listening on port 40001
+[debug] [2025-06-02T15:26:18.871Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-06-02T15:26:18.871Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-06-02T15:26:18.893Z] [Firebase Plugin] User found:  ergis.hasani2003@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2025-06-02T15:26:18.894Z] Checked if tokens are valid: true, expires at: 1748881577872
+[debug] [2025-06-02T15:26:18.895Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2025-06-02T15:26:19.558Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2025-06-02T15:26:19.558Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[info] [Firebase Plugin] Stopping Data Connect toolkit

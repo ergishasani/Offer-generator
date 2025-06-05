@@ -440,3 +440,37 @@ $spacing: 0.5rem;
     margin-top: 1rem;
   }
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Styles for the PRODUCT DROPDOWNS (replacing the old text input)
+// ──────────────────────────────────────────────────────────────────────────────
+
+.products-table-row {
+  align-items: center;
+}
+
+.products-table-row .col-product {
+  /* Ensure dropdown fills the same width that the old text input did */
+  display: flex;
+  align-items: center;
+}
+
+.products-table-row .col-product .select.full-width {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.95rem;
+  border: 1px solid #d1d3d8;
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.2s ease-in-out;
+
+  &:focus {
+    border-color: #4d90fe;
+    box-shadow: 0 0 0 1px rgba(77, 144, 254, 0.4);
+  }
+}
+
+/* Hide the “+ Select product” link because selection is built into each row now */
+.products-footer-links .add-link:last-child {
+  display: none;
+}

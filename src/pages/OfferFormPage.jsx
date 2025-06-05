@@ -6,17 +6,39 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { auth, db } from "../services/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import {
-  doc,
-  getDoc,
-} from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 
 import "react-datepicker/dist/react-datepicker.css";
 import "../assets/styles/pages/_offerFormPage.scss";
 
-// ——————————————————————————————————————————————————————————————————————————
+// ──────────────────────────────────────────────────────────────────────────────
+// CONSTANT: List of Products (Used for the “Product or service” dropdown)
+// ──────────────────────────────────────────────────────────────────────────────
+const PRODUCT_LIST = [
+  "Tilt and Turn Window",
+  "Fixed in Frame",
+  "Tilt and Turn Window with Spandrel",
+  "Two-Part Moveable Mullion Window (Turn/Turn)",
+  "Two-Part Window (Tilt and Turn)",
+  "Two-Part Moveable Mullion Window (Turn/Turn-Tilt)",
+  "Two-Part Window (Tilt and Turn) with Fixed Fanlight",
+  "Two-Part Window (Tilt and Turn) with Spandrel",
+  "One-Part Window (Tilt and Turn)",
+  "One-Part Window (Tilt and Turn) with Bracket on Right",
+  "One-Part Window (Tilt and Turn) with Bracket on Left",
+  "Residential Door",
+  "French Door with Threshold",
+  "Side Entrance Door",
+  "Lift and Slide Door",
+  "Tilt/Slide-Door (GEALAN-SMOOVIO®)",
+  "PSK",
+  "Special Variants",
+  // (Add more product names here as needed)
+];
+
+// ──────────────────────────────────────────────────────────────────────────────
 // CONSTANTS (Units, VAT Options)
-// ——————————————————————————————————————————————————————————————————————————
+// ──────────────────────────────────────────────────────────────────────────────
 const UNIT_OPTIONS = [
   { label: "Stk", value: "Stk" },
   { label: "m²", value: "m2" },
@@ -30,9 +52,9 @@ const VAT_OPTIONS = [
   { label: "0%", value: 0 },
 ];
 
-// ——————————————————————————————————————————————————————————————————————————
+// ──────────────────────────────────────────────────────────────────────────────
 // COMPONENT: OfferFormPage
-// ——————————————————————————————————————————————————————————————————————————
+// ──────────────────────────────────────────────────────────────────────────────
 export default function OfferFormPage() {
   const { offerId } = useParams();
 
@@ -53,7 +75,7 @@ export default function OfferFormPage() {
   const [profileLoading, setProfileLoading] = useState(true);
 
   // ──────────────────────────────────────────────────────────────────────────────
-  // CONTACT / OFFER STATE (same as before)
+  // CONTACT / OFFER STATE
   // ──────────────────────────────────────────────────────────────────────────────
   const [contactName, setContactName] = useState("");
   const [addressLine1, setAddressLine1] = useState("");
@@ -73,13 +95,13 @@ export default function OfferFormPage() {
   );
 
   // ──────────────────────────────────────────────────────────────────────────────
-  // PRODUCTS SECTION STATE
+  // PRODUCTS SECTION STATE (RESTORED with dropdown)
   // ──────────────────────────────────────────────────────────────────────────────
   const [useNetPrices, setUseNetPrices] = useState(true);
   const [items, setItems] = useState([
     {
       id: Date.now(),
-      productName: "",
+      productName: "", // initially blank; user will pick from dropdown
       quantity: 1,
       unit: "Stk",
       unitPrice: 0.0,
@@ -89,7 +111,7 @@ export default function OfferFormPage() {
   ]);
   const [totalDiscount, setTotalDiscount] = useState(0);
 
-  // Helpers for line totals & subtotals
+  // LINE TOTAL / SUBTOTAL HELPERS (same as before)
   const computeLineTotalNet = (item) => {
     const qty = parseFloat(item.quantity) || 0;
     const price = parseFloat(item.unitPrice) || 0;
@@ -199,7 +221,7 @@ export default function OfferFormPage() {
   }, []);
 
   // ──────────────────────────────────────────────────────────────────────────────
-  // 2) Generate PDF (uses companyProfile from state)
+  // 2) Generate PDF (uses companyProfile & items from state)
   // ──────────────────────────────────────────────────────────────────────────────
   const generatePDF = () => {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -209,10 +231,6 @@ export default function OfferFormPage() {
 
     // --- COMPANY HEADER (logo or name) ---
     if (companyProfile.logoUrl) {
-      // If you want to fetch the image into jsPDF, you must load it as data URL first.
-      // For simplicity, we’ll just write the company name text here, but you could do:
-      //   const imgData = await loadImageAsDataURL(companyProfile.logoUrl);
-      //   doc.addImage(imgData, "PNG", margin, cursorY, 100, 40);
       doc.setFontSize(18).setTextColor("#000");
       doc.text(companyProfile.name, margin, cursorY + 5);
       doc.setFontSize(10).setTextColor("#555");
@@ -456,6 +474,7 @@ export default function OfferFormPage() {
       alert("Bitte Kontaktname und Angebotsnummer angeben.");
       return;
     }
+    // Check that at least one line has a product selected & valid quantity/price
     const validItems = items.filter(
       (it) =>
         it.productName.trim() &&
@@ -464,7 +483,7 @@ export default function OfferFormPage() {
     );
     if (validItems.length === 0) {
       alert(
-        "Bitte mindestens ein Produkt mit Menge > 0 und gültigem Preis eingeben."
+        "Bitte mindestens ein Produkt auswählen, mit Menge > 0 und gültigem Preis eingeben."
       );
       return;
     }
@@ -485,16 +504,16 @@ export default function OfferFormPage() {
 
   return (
     <div className="offer-form-page">
-      {/* You can show company name/logo at top of form, if you like: */}
+      {/* COMPANY HEADER */}
       {!profileLoading && (
         <div className="company-header">
-          {companyProfile.logoUrl ? (
+          {companyProfile.logoUrl && (
             <img
               src={companyProfile.logoUrl}
               alt="Company logo"
               className="company-logo"
             />
-          ) : null}
+          )}
           <div className="company-info">
             <h3 className="company-name">
               {companyProfile.name || "Your Company Name"}
@@ -615,16 +634,12 @@ export default function OfferFormPage() {
                   />
                 </div>
                 <div className="field-group">
-                  <label className="label">
-                    Reference / Order number
-                  </label>
+                  <label className="label">Reference / Order number</label>
                   <input
                     type="text"
                     className="input full-width"
                     value={referenceOrder}
-                    onChange={(e) =>
-                      setReferenceOrder(e.target.value)
-                    }
+                    onChange={(e) => setReferenceOrder(e.target.value)}
                   />
                 </div>
               </div>
@@ -646,7 +661,7 @@ export default function OfferFormPage() {
         </section>
 
         {/* ────────────────────────────────────────────────────────────── */}
-        {/* SECTION 3: PRODUCTS */}
+        {/* SECTION 3: PRODUCTS (RESTORED) */}
         {/* ────────────────────────────────────────────────────────────── */}
         <section className="section products-section">
           <div className="section-header">PRODUCTS</div>
@@ -673,7 +688,7 @@ export default function OfferFormPage() {
           <div className="products-table-header">
             <div className="col col-index">#</div>
             <div className="col col-product">Product or service</div>
-            <div className="col col-qty">Crowd</div>
+            <div className="col col-qty">Qty</div>
             <div className="col col-unit">Unit</div>
             <div className="col col-price">
               Price ({useNetPrices ? "net" : "brutto"})
@@ -696,16 +711,22 @@ export default function OfferFormPage() {
               <div className="products-table-row" key={item.id}>
                 <div className="col col-index">{idx + 1}.</div>
 
+                {/* PRODUCT DROPDOWN (instead of free-text input) */}
                 <div className="col col-product">
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="Search product"
+                  <select
+                    className="select full-width"
                     value={item.productName}
                     onChange={(e) =>
                       handleItemChange(item.id, "productName", e.target.value)
                     }
-                  />
+                  >
+                    <option value="">-- Select product --</option>
+                    {PRODUCT_LIST.map((prodName) => (
+                      <option key={prodName} value={prodName}>
+                        {prodName}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="col col-qty">
@@ -802,11 +823,7 @@ export default function OfferFormPage() {
 
           {/* Footer Links */}
           <div className="products-footer-links">
-            <button
-              type="button"
-              className="add-link"
-              onClick={handleAddItem}
-            >
+            <button type="button" className="add-link" onClick={handleAddItem}>
               + Add position
             </button>
             <button
@@ -816,16 +833,12 @@ export default function OfferFormPage() {
             >
               + Reset global discount
             </button>
-            <button type="button" className="add-link">
-              + Select product
-            </button>
+            {/* “Select product” link removed, since we now have a dropdown per line */}
           </div>
 
           {/* Global Discount Input */}
           <div className="global-discount">
-            <label className="label small-label">
-              Total Discount (%):
-            </label>
+            <label className="label small-label">Total Discount (%):</label>
             <input
               type="number"
               min="0"
@@ -840,9 +853,7 @@ export default function OfferFormPage() {
           {/* Totals Area */}
           <div className="totals-area">
             <div className="totals-row">
-              <div className="totals-label">
-                Subtotal (before discount):
-              </div>
+              <div className="totals-label">Subtotal (before discount):</div>
               <div className="totals-value">
                 {computeSubTotal().toFixed(2)} €
               </div>
@@ -902,9 +913,7 @@ export default function OfferFormPage() {
               className="toggle-more"
               onClick={() => setShowMoreOptions((p) => !p)}
             >
-              {showMoreOptions
-                ? "Hide more options"
-                : "Show more options"}
+              {showMoreOptions ? "Hide more options" : "Show more options"}
             </button>
           </div>
 
@@ -924,33 +933,25 @@ export default function OfferFormPage() {
                   </select>
                 </div>
                 <div className="column">
-                  <label className="label">
-                    Internal Contact Person
-                  </label>
+                  <label className="label">Internal Contact Person</label>
                   <input
                     type="text"
                     className="input full-width"
                     placeholder="e.g. Rivaldo Dini"
                     value={internalContact}
-                    onChange={(e) =>
-                      setInternalContact(e.target.value)
-                    }
+                    onChange={(e) => setInternalContact(e.target.value)}
                   />
                 </div>
               </div>
 
               <div className="two-columns">
                 <div className="column">
-                  <label className="label">
-                    Delivery conditions
-                  </label>
+                  <label className="label">Delivery conditions</label>
                   <input
                     type="text"
                     className="input full-width"
                     value={deliveryConditions}
-                    onChange={(e) =>
-                      setDeliveryConditions(e.target.value)
-                    }
+                    onChange={(e) => setDeliveryConditions(e.target.value)}
                   />
                 </div>
                 <div className="column">
@@ -959,9 +960,7 @@ export default function OfferFormPage() {
                     type="text"
                     className="input full-width"
                     value={paymentTerms}
-                    onChange={(e) =>
-                      setPaymentTerms(e.target.value)
-                    }
+                    onChange={(e) => setPaymentTerms(e.target.value)}
                   />
                 </div>
               </div>
@@ -971,9 +970,7 @@ export default function OfferFormPage() {
                 <select
                   className="select full-width"
                   value={vatRegulation}
-                  onChange={(e) =>
-                    setVatRegulation(e.target.value)
-                  }
+                  onChange={(e) => setVatRegulation(e.target.value)}
                 >
                   <option value="In Germany">In Germany</option>
                   <option value="In other EU countries">
