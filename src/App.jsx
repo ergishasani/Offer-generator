@@ -12,7 +12,6 @@ import ProductsPage from "./pages/ProductsPage";
 import ProductEditPage from "./pages/ProductEditPage";
 
 import OfferFormPage from "./pages/OfferFormPage";
-import ProductRowEditPage from "./pages/ProductEditPage"; 
 import ProductCatalogEditPage from "./pages/CatalogPage";
 import Offers from "./pages/OffersPage";
 // If you have a separate “ProductRowEditPage” (for editing within an Offer),

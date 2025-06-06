@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+
 import DatePicker from "react-datepicker";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -19,7 +19,6 @@ import "react-datepicker/dist/react-datepicker.css";
 import "../assets/styles/pages/_offerFormPage.scss";
 
 export default function OfferFormPage() {
-  const { offerId } = useParams();
 
   // ──────────────────────────────────────────────────────────────────────────────
   // 1) COMPANY PROFILE STATE (fetched from Firestore)
