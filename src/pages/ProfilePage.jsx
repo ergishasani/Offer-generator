@@ -59,7 +59,7 @@ export default function ProfilePage() {
         setLoadingProfile(false);
       }
     },
-    [db]
+    []
   );
 
   // 2) Listen for Auth state; once we have a user, fetch profile
@@ -74,7 +74,7 @@ export default function ProfilePage() {
       }
     });
     return () => unsubscribe();
-  }, [auth, fetchProfile]);
+  }, [fetchProfile]);
 
   // 3) Handle logo file selection
   const handleLogoChange = (e) => {

@@ -7,19 +7,13 @@ import {
   View,
   Image,
   StyleSheet,
-  Font,
 } from "@react-pdf/renderer";
 
 // --------------------------------------------------------------------------------------------------
 // 1) Register a font if you need a custom font. Otherwise, you can use the default “Helvetica”
 // If your sample PDF uses a specific font (e.g., Arial, Roboto), you can embed it here.
 // --------------------------------------------------------------------------------------------------
-/*
-Font.register({
-  family: "Arial",
-  src: "/path/to/Arial.ttf",
-});
-*/
+
 
 // --------------------------------------------------------------------------------------------------
 // 2) Define all the styles (mimicking the exact measurements of the sample PDF).

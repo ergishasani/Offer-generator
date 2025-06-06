@@ -6,7 +6,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Font,
 } from "@react-pdf/renderer";
 
 // (Optional) Register a font if you need a custom typeface
