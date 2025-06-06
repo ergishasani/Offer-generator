@@ -1,11 +1,12 @@
 // src/pages/RegisterPage.jsx
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import "../assets/styles/pages/_registerPage.scss";
 
 export default function RegisterPage() {
-  const { registerWithEmail, loginWithGoogle } = useAuth();
+  const { currentUser, registerWithEmail, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   // Form fields
@@ -17,13 +18,17 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Helper: Validate email format (basic)
-  const isValidEmail = (email) => {
-    // Very simple regex for demonstration; adjust as needed
-    return /\S+@\S+\.\S+/.test(email);
-  };
+  // If already logged in, redirect to home (or offers page)
+  useEffect(() => {
+    if (currentUser) {
+      navigate("/");
+    }
+  }, [currentUser, navigate]);
 
-  // Main submit handler
+  // Basic email validation (very simple)
+  const isValidEmail = (str) => /\S+@\S+\.\S+/.test(str);
+
+  // Handle registration form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -32,7 +37,7 @@ export default function RegisterPage() {
     if (!email.trim() || !password || !passwordConfirm) {
       return setError("Please fill in all fields.");
     }
-    if (!isValidEmail(email)) {
+    if (!isValidEmail(email.trim())) {
       return setError("Please enter a valid email address.");
     }
     if (password.length < 6) {
@@ -42,31 +47,45 @@ export default function RegisterPage() {
       return setError("Passwords do not match.");
     }
 
+    setLoading(true);
     try {
-      setLoading(true);
       // 2) Attempt registration
-      await registerWithEmail(email, password);
-      // 3) Redirect on success
-      navigate("/");
+      await registerWithEmail(email.trim(), password);
+      // onAuthStateChanged → currentUser will be set → useEffect will redirect
     } catch (err) {
-      // 4) Show any Firebase error message
       console.error("Registration error:", err);
-      setError(err.message);
+      switch (err.code) {
+        case "auth/email-already-in-use":
+          setError("An account with this email already exists.");
+          break;
+        case "auth/weak-password":
+          setError("Password is too weak.");
+          break;
+        case "auth/invalid-email":
+          setError("Invalid email address.");
+          break;
+        default:
+          setError("Failed to create an account. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Optional: “Continue with Google” handler
+  // Optional: “Continue with Google” in the register form
   const handleGoogleSignIn = async () => {
     setError("");
+    setLoading(true);
     try {
-      setLoading(true);
       await loginWithGoogle();
-      navigate("/");
+      // onAuthStateChanged → currentUser → redirect
     } catch (err) {
-      console.error("Google Sign‐In error:", err);
-      setError(err.message);
+      console.error("Google Sign-In error:", err);
+      if (err.code === "auth/unauthorized-domain") {
+        setError("This domain is not authorized for Google sign-in. Please add your Netlify domain in Firebase Console.");
+      } else {
+        setError("Failed to sign in with Google. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -81,9 +100,9 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="register-form">
           <div className="field-group">
-            <label htmlFor="email">Email Address</label>
+            <label htmlFor="register-email">Email Address</label>
             <input
-              id="email"
+              id="register-email"
               type="email"
               placeholder="you@example.com"
               value={email}
@@ -94,9 +113,9 @@ export default function RegisterPage() {
           </div>
 
           <div className="field-group">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="register-password">Password</label>
             <input
-              id="password"
+              id="register-password"
               type="password"
               placeholder="Enter a password"
               value={password}
@@ -107,9 +126,9 @@ export default function RegisterPage() {
           </div>
 
           <div className="field-group">
-            <label htmlFor="passwordConfirm">Confirm Password</label>
+            <label htmlFor="register-passwordConfirm">Confirm Password</label>
             <input
-              id="passwordConfirm"
+              id="register-passwordConfirm"
               type="password"
               placeholder="Repeat your password"
               value={passwordConfirm}
@@ -138,16 +157,15 @@ export default function RegisterPage() {
           disabled={loading}
         >
           <img
-            src="/google‐icon.svg"
+            src="/google-icon.svg"
             alt="Google icon"
-            className="google‐icon"
+            className="google-icon"
           />
           {loading ? "Signing in…" : "Continue with Google"}
         </button>
 
-        <p className="login‐link">
-          Already have an account?{" "}
-          <Link to="/login">Log in here</Link>
+        <p className="login-link">
+          Already have an account? <Link to="/login">Log in here</Link>
         </p>
       </div>
     </div>

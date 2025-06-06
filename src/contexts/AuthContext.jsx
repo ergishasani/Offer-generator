@@ -1,4 +1,5 @@
 // src/contexts/AuthContext.jsx
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import {
   createUserWithEmailAndPassword,
@@ -7,60 +8,68 @@ import {
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
-import { auth, googleProvider /*, appleProvider */ } from "../services/firebase";
+
+import { auth, googleProvider } from "../services/firebase";
 
 const AuthContext = createContext();
 
 /**
- * Custom hook for consuming AuthContext.
+ * Custom hook to grab the AuthContext value.
  */
 export function useAuth() {
   return useContext(AuthContext);
 }
 
 /**
- * AuthProvider wraps around your app (or the part that needs auth).
- * It provides:
- *   - currentUser
- *   - registerWithEmail
- *   - loginWithEmail
- *   - loginWithGoogle
- *   - logout
+ * AuthProvider wraps your entire app (or at least 
+ * the portion that needs authentication).
+ * It keeps track of currentUser and exposes:
+ *   - registerWithEmail(email, password)
+ *   - loginWithEmail(email, password)
+ *   - loginWithGoogle()
+ *   - logout()
  */
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // 1) Listen for Firebase Auth state changes (login/logout)
+  // Listen for Firebase Auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       setLoading(false);
     });
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
-  // 2) Email & Password registration
+  /**
+   * Register a new account via email & password.
+   * Returns a Promise.
+   */
   function registerWithEmail(email, password) {
     return createUserWithEmailAndPassword(auth, email, password);
   }
 
-  // 3) Email & Password login
+  /**
+   * Log in with email & password.
+   * Returns a Promise.
+   */
   function loginWithEmail(email, password) {
     return signInWithEmailAndPassword(auth, email, password);
   }
 
-  // 4) Google popup login
+  /**
+   * Log in with Google (popup).
+   * Returns a Promise.
+   */
   function loginWithGoogle() {
     return signInWithPopup(auth, googleProvider);
   }
 
-  // 5) (Optional) Apple popup login, if configured
-  // function loginWithApple() {
-  //   return signInWithPopup(auth, appleProvider);
-  // }
-
-  // 6) Logout
+  /**
+   * Log out the current user.
+   * Returns a Promise.
+   */
   function logout() {
     return signOut(auth);
   }
@@ -70,13 +79,12 @@ export function AuthProvider({ children }) {
     registerWithEmail,
     loginWithEmail,
     loginWithGoogle,
-    // loginWithApple,
     logout,
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {/* Do not render children until we know if a user is logged in */}
+      {/* Don’t render children until we know auth state */}
       {!loading && children}
     </AuthContext.Provider>
   );

@@ -1,4 +1,5 @@
 // src/pages/LoginPage.jsx
+
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -38,15 +39,18 @@ export default function LoginPage() {
       // onAuthStateChanged → currentUser updates → useEffect redirects
     } catch (err) {
       console.error("Email login error:", err);
-      // Map common Firebase errors to friendlier messages if desired:
-      if (err.code === "auth/user-not-found") {
-        setError("No account found with this email.");
-      } else if (err.code === "auth/wrong-password") {
-        setError("Incorrect password.");
-      } else if (err.code === "auth/invalid-email") {
-        setError("Invalid email address.");
-      } else {
-        setError("Failed to sign in. Please try again.");
+      switch (err.code) {
+        case "auth/user-not-found":
+          setError("No account found with this email.");
+          break;
+        case "auth/wrong-password":
+          setError("Incorrect password.");
+          break;
+        case "auth/invalid-email":
+          setError("Invalid email address.");
+          break;
+        default:
+          setError("Failed to sign in. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -62,7 +66,11 @@ export default function LoginPage() {
       // onAuthStateChanged → currentUser updates → useEffect redirects
     } catch (err) {
       console.error("Google login error:", err);
-      setError("Failed to sign in with Google. Please try again.");
+      if (err.code === "auth/unauthorized-domain") {
+        setError("This domain is not authorized for Google sign‐in. Please add your Netlify domain in Firebase Console.");
+      } else {
+        setError("Failed to sign in with Google. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -121,7 +129,7 @@ export default function LoginPage() {
           disabled={loading}
         >
           <img
-            src="/google‐icon.svg"
+            src="/google-icon.svg"
             alt="Google icon"
             className="google-icon"
           />
@@ -129,8 +137,7 @@ export default function LoginPage() {
         </button>
 
         <p className="register-link">
-          Don’t have an account?{" "}
-          <Link to="/register">Register here</Link>
+          Don’t have an account? <Link to="/register">Register here</Link>
         </p>
       </div>
     </div>
