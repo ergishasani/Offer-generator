@@ -75,7 +75,7 @@ export default function OfferFormPage() {
       productName: "",
       quantity: 1,
       unit: "Stk",
-      unitPrice: 0.0,
+      unitPrice: 0.0, 
       vat: 19,
       discount: 0,
 

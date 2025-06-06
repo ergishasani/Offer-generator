@@ -13,6 +13,8 @@ import ProductEditPage from "./pages/ProductEditPage";
 
 import OfferFormPage from "./pages/OfferFormPage";
 import ProductRowEditPage from "./pages/ProductEditPage"; 
+import ProductCatalogEditPage from "./pages/CatalogPage";
+import Offers from "./pages/OffersPage";
 // If you have a separate “ProductRowEditPage” (for editing within an Offer),
 // adjust accordingly—here we only show the “catalog” version.
 
@@ -26,6 +28,9 @@ function App() {
           {/* Public */}
           <Route path="/login" element={<LoginPage />} />
 
+
+          <Route path="/offers" element={<Offers />} />
+
           {/* Profile */}
           <Route path="/profile" element={<ProfilePage />} />
 
@@ -35,6 +40,8 @@ function App() {
             path="/products/:productId/edit"
             element={<ProductEditPage />}
           />
+
+          <Route path="/catalog" element={<ProductCatalogEditPage />} />
 
           {/* Offer & Product‐in‐Offer editing */}
           <Route path="/offers/:offerId" element={<OfferFormPage />} />

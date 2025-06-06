@@ -1,0 +1,98 @@
+// src/assets/styles/pages/_offersPage.scss
+
+.offers-page {
+  padding: 2rem;
+  font-family: sans-serif;
+
+  .offers-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    h2 {
+      margin: 0;
+      font-size: 1.75rem;
+      color: #333;
+    }
+
+    .btn-add-offer {
+      background-color: #388e3c; // green
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: #2e7d32;
+      }
+    }
+  }
+
+  .no-offers {
+    font-size: 1rem;
+    color: #555;
+    margin-top: 2rem;
+    text-align: center;
+  }
+
+  .offers-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    thead {
+      background-color: #1976d2; // blue header
+      color: white;
+
+      th {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-size: 0.95rem;
+      }
+    }
+    tbody {
+      background-color: white;
+
+      tr {
+        border-bottom: 1px solid #ddd;
+
+        &:hover {
+          background-color: #f9f9f9;
+        }
+      }
+
+      td {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+        color: #333;
+      }
+
+      .actions-cell {
+        display: flex;
+        gap: 0.5rem;
+
+        .icon-button {
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 1.1rem;
+          padding: 0.2rem;
+          transition: color 0.2s;
+
+          &:hover {
+            color: #1976d2;
+          }
+        }
+
+        .delete-offer:hover {
+          color: #d32f2f;
+        }
+      }
+    }
+  }
+}

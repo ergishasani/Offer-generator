@@ -1,10 +1,4 @@
 // src/pages/ProductEditPage.jsx
-// ──────────────────────────────────────────────────────────────────────────────
-// Allows the user to edit a single “catalog product” under Firestore path:
-//    users/{uid}/products/{productId}
-//
-// Guarded against null/undefined, so you won’t get "Cannot read properties of null"
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -13,6 +7,10 @@ import {
   getDoc,
   updateDoc,
   serverTimestamp,
+  collection,
+  onSnapshot,
+  query,
+  orderBy,
 } from "firebase/firestore";
 import { db } from "../services/firebase";
 import NavBar from "../components/NavBar";
@@ -24,26 +22,29 @@ export default function ProductEditPage() {
   const { productId } = useParams();
   const navigate = useNavigate();
 
-  const [product, setProduct] = useState(null); // raw Firestore data + id
-  const [local, setLocal] = useState(null);     // local editable copy
+  // Firestore state
+  const [product, setProduct] = useState(null);
+  const [local, setLocal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // 1) Fetch Firestore document: users/{uid}/products/{productId}
-  // ────────────────────────────────────────────────────────────────────────────
+  // Category state: global + user-specific
+  const [globalCategories, setGlobalCategories] = useState([]);
+  const [userCategories, setUserCategories] = useState([]);
+  const [allCategories, setAllCategories] = useState([]);
+
+  // 1) Listen for auth; if no user, redirect
   useEffect(() => {
     if (!currentUser) {
       navigate("/login");
-      return;
     }
-    const docRef = doc(
-      db,
-      "users",
-      currentUser.uid,
-      "products",
-      productId
-    );
+  }, [currentUser, navigate]);
+
+  // 2) Fetch the product document and initialize local state
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const docRef = doc(db, "users", currentUser.uid, "products", productId);
     getDoc(docRef)
       .then((snap) => {
         if (!snap.exists()) {
@@ -52,8 +53,10 @@ export default function ProductEditPage() {
         } else {
           const data = snap.data();
           setProduct({ id: snap.id, ...data });
-          // Copy all fields into local state—make sure arrays exist
+
+          // Initialize local copy, making sure categoryId is present
           setLocal({
+            categoryId: data.categoryId || "",
             productName: data.productName || "",
             quantity: data.quantity ?? 1,
             unit: data.unit || "Stk",
@@ -94,9 +97,49 @@ export default function ProductEditPage() {
       });
   }, [currentUser, productId, navigate]);
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // 2) Early returns for “loading” and “not found”
-  // ────────────────────────────────────────────────────────────────────────────
+  // 3) Subscribe to both global and user-specific categories
+  useEffect(() => {
+    if (!currentUser) return;
+
+    // 3a) global (root) categories
+    const qGlobalCats = query(
+      collection(db, "categories"),
+      orderBy("name", "asc")
+    );
+    const unsubGlobal = onSnapshot(qGlobalCats, (snap) => {
+      const arr = [];
+      snap.forEach((docSnap) => {
+        arr.push({ id: docSnap.id, name: docSnap.data().name, isUserOnly: false });
+      });
+      setGlobalCategories(arr);
+    });
+
+    // 3b) user-specific categories
+    const qUserCats = query(
+      collection(db, "users", currentUser.uid, "categories"),
+      orderBy("name", "asc")
+    );
+    const unsubUser = onSnapshot(qUserCats, (snap) => {
+      const arr = [];
+      snap.forEach((docSnap) => {
+        arr.push({ id: docSnap.id, name: docSnap.data().name, isUserOnly: true });
+      });
+      setUserCategories(arr);
+    });
+
+    return () => {
+      unsubGlobal();
+      unsubUser();
+    };
+  }, [currentUser]);
+
+  // 4) Merge global + user categories whenever either changes
+  useEffect(() => {
+    // We want user categories to appear after global. If desired, you can interleave or sort differently.
+    setAllCategories([...globalCategories, ...userCategories]);
+  }, [globalCategories, userCategories]);
+
+  // 5) Early returns while loading or product not found
   if (loading) {
     return (
       <div className="product-edit-page">
@@ -111,35 +154,21 @@ export default function ProductEditPage() {
       <div className="product-edit-page">
         <NavBar />
         <h2>Product Not Found</h2>
-        <button onClick={() => navigate("/products")}>
-          Back to Catalog
-        </button>
+        <button onClick={() => navigate("/products")}>Back to Catalog</button>
       </div>
     );
   }
 
-  // Now that loading is false and product !== null, we know `local` is non‐null. We can safely read local.<field>.
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // 3) Helper: update top‐level field in local state
-  // ────────────────────────────────────────────────────────────────────────────
+  // 6) Handle simple local state updates
   const handleChange = (field, value) => {
-    setLocal((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setLocal((prev) => ({ ...prev, [field]: value }));
   };
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // 4) CRUD for Accessories array
-  // ────────────────────────────────────────────────────────────────────────────
+  // 7) Accessory / Filling CRUD (unchanged)
   const handleAddAccessory = () => {
     setLocal((prev) => ({
       ...prev,
-      accessories: [
-        ...(prev.accessories || []),
-        { code: "", description: "", qty: 1 },
-      ],
+      accessories: [...(prev.accessories || []), { code: "", description: "", qty: 1 }],
     }));
   };
   const handleAccessoryChange = (index, field, value) => {
@@ -153,21 +182,12 @@ export default function ProductEditPage() {
     setLocal((prev) => ({ ...prev, accessories: updated }));
   };
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // 5) CRUD for Fillings array
-  // ────────────────────────────────────────────────────────────────────────────
   const handleAddFilling = () => {
     setLocal((prev) => ({
       ...prev,
       fillings: [
         ...(prev.fillings || []),
-        {
-          id: "",
-          spec: "",
-          dimensions: "",
-          price: 0.0,
-          discountPercent: 0,
-        },
+        { id: "", spec: "", dimensions: "", price: 0.0, discountPercent: 0 },
       ],
     }));
   };
@@ -186,19 +206,11 @@ export default function ProductEditPage() {
     setLocal((prev) => ({ ...prev, fillings: updated }));
   };
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // 6) Save all local fields back to Firestore
-  // ────────────────────────────────────────────────────────────────────────────
+  // 8) Save back to Firestore
   const handleSave = async () => {
     setSaving(true);
     try {
-      const docRef = doc(
-        db,
-        "users",
-        currentUser.uid,
-        "products",
-        productId
-      );
+      const docRef = doc(db, "users", currentUser.uid, "products", productId);
       await updateDoc(docRef, {
         ...local,
         updatedAt: serverTimestamp(),
@@ -206,14 +218,13 @@ export default function ProductEditPage() {
       navigate("/products");
     } catch (err) {
       console.error("Error saving product:", err);
+      alert("Could not save changes. Please try again.");
     } finally {
       setSaving(false);
     }
   };
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // 7) Render the form (local is guaranteed non‐null here)
-  // ────────────────────────────────────────────────────────────────────────────
+  // 9) Render the full form, including the Category dropdown
   return (
     <div className="product-edit-page">
       <NavBar />
@@ -222,7 +233,24 @@ export default function ProductEditPage() {
         (ID: <code>{product.id}</code>)
       </p>
 
-      {/* BASIC WINDOW FIELDS */}
+      {/* ───── Category Selection ───── */}
+      <div className="field-group">
+        <label className="label">Category</label>
+        <select
+          className="select full-width"
+          value={local.categoryId}
+          onChange={(e) => handleChange("categoryId", e.target.value)}
+        >
+          <option value="">-- Keine Kategorie --</option>
+          {allCategories.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.name} {cat.isUserOnly ? "(Ihr)" : "(Global)"}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* ───── BASIC WINDOW FIELDS ───── */}
       <div className="field-group">
         <label className="label">Product Name</label>
         <input
@@ -293,7 +321,7 @@ export default function ProductEditPage() {
 
       <hr />
 
-      {/* FRAME & COLORS & DIMENSIONS */}
+      {/* ───── FRAME & COLORS & DIMENSIONS ───── */}
       <h3>Frame &amp; Color Configuration</h3>
 
       <div className="field-group">
@@ -312,7 +340,7 @@ export default function ProductEditPage() {
           <input
             type="text"
             className="input"
-            placeholder="e.g. Anthrazitgrau Sandstruktur / pureWhite"
+            placeholder="z. B. Anthrazitgrau Sandstruktur"
             value={local.outerColor}
             onChange={(e) => handleChange("outerColor", e.target.value)}
           />
@@ -322,7 +350,7 @@ export default function ProductEditPage() {
           <input
             type="text"
             className="input"
-            placeholder="e.g. Weiß mit schwarzer Dichtung"
+            placeholder="z. B. Weiß mit schwarzer Dichtung"
             value={local.innerColor}
             onChange={(e) => handleChange("innerColor", e.target.value)}
           />
@@ -331,7 +359,7 @@ export default function ProductEditPage() {
 
       <div className="field-group">
         <label className="label">
-          Maße (Dimensions, e.g. “4250 mm × 2180 mm”)
+          Maße (Dimensions, z. B. “4250 mm × 2180 mm”)
         </label>
         <input
           type="text"
@@ -342,9 +370,7 @@ export default function ProductEditPage() {
       </div>
 
       <div className="field-group">
-        <label className="label">
-          Furnierfarbe des Rahmens (Frame Veneer Color)
-        </label>
+        <label className="label">Furnierfarbe des Rahmens (Frame Veneer Color)</label>
         <input
           type="text"
           className="input full-width"
@@ -354,9 +380,7 @@ export default function ProductEditPage() {
       </div>
 
       <div className="field-group">
-        <label className="label">
-          Furnierfarbe des Flügels (Sash Veneer Color)
-        </label>
+        <label className="label">Furnierfarbe des Flügels (Sash Veneer Color)</label>
         <input
           type="text"
           className="input full-width"
@@ -395,7 +419,7 @@ export default function ProductEditPage() {
         <input
           type="text"
           className="input full-width"
-          placeholder="e.g. GU THERMO SCHWELLE 50 mm"
+          placeholder="z. B. GU THERMO SCHWELLE 50 mm"
           value={local.thresholdType}
           onChange={(e) => handleChange("thresholdType", e.target.value)}
         />
@@ -406,7 +430,7 @@ export default function ProductEditPage() {
         <input
           type="text"
           className="input full-width"
-          placeholder="e.g. V-Super"
+          placeholder="z. B. V-Super"
           value={local.weldingType}
           onChange={(e) => handleChange("weldingType", e.target.value)}
         />
@@ -414,7 +438,7 @@ export default function ProductEditPage() {
 
       <hr />
 
-      {/* GLAZING & GLASS HOLDER */}
+      {/* ───── GLAZING & GLASS HOLDER ───── */}
       <h3>Glazing &amp; Glass Holder</h3>
 
       <div className="field-group">
@@ -422,7 +446,7 @@ export default function ProductEditPage() {
         <input
           type="text"
           className="input full-width"
-          placeholder="e.g. 6th/14Ar/6/16Ar/6th [Ug=0.6] (48mm)"
+          placeholder="z. B. 6th/14Ar/6/16Ar/6th [Ug=0.6] (48 mm)"
           value={local.glazing}
           onChange={(e) => handleChange("glazing", e.target.value)}
         />
@@ -433,7 +457,7 @@ export default function ProductEditPage() {
         <input
           type="text"
           className="input full-width"
-          placeholder="e.g. GLASLEISTE CLASSIC – LINE – HST Evolution Drive"
+          placeholder="z. B. GLASLEISTE CLASSIC – LINE"
           value={local.glassHold}
           onChange={(e) => handleChange("glassHold", e.target.value)}
         />
@@ -444,7 +468,7 @@ export default function ProductEditPage() {
         <input
           type="text"
           className="input full-width"
-          placeholder="e.g. HS8600 Skrzydło…"
+          placeholder="z. B. HS8600 Skrzydło…"
           value={local.sashType}
           onChange={(e) => handleChange("sashType", e.target.value)}
         />
@@ -452,7 +476,7 @@ export default function ProductEditPage() {
 
       <hr />
 
-      {/* FITTING */}
+      {/* ───── FITTING ───── */}
       <h3>Beschlag (Fitting)</h3>
 
       <div className="field-group">
@@ -460,7 +484,7 @@ export default function ProductEditPage() {
         <input
           type="text"
           className="input full-width"
-          placeholder="e.g. HST Beschlag"
+          placeholder="z. B. HST Beschlag"
           value={local.fitting}
           onChange={(e) => handleChange("fitting", e.target.value)}
         />
@@ -510,7 +534,7 @@ export default function ProductEditPage() {
 
       <hr />
 
-      {/* ADDITIONAL SPECS */}
+      {/* ───── ADDITIONAL SPECS ───── */}
       <h3>Additional Specs</h3>
 
       <div className="field-group">
@@ -518,7 +542,7 @@ export default function ProductEditPage() {
         <input
           type="text"
           className="input full-width"
-          placeholder="e.g. Uw = 0.90 W/m²·K"
+          placeholder="z. B. Uw = 0.90 W/m²·K"
           value={local.UwCoefficient}
           onChange={(e) => handleChange("UwCoefficient", e.target.value)}
         />
@@ -529,7 +553,7 @@ export default function ProductEditPage() {
         <input
           type="text"
           className="input full-width"
-          placeholder="e.g. 564.7 Kg"
+          placeholder="z. B. 564.7 Kg"
           value={local.weightUnit}
           onChange={(e) => handleChange("weightUnit", e.target.value)}
         />
@@ -540,7 +564,7 @@ export default function ProductEditPage() {
         <input
           type="text"
           className="input full-width"
-          placeholder="e.g. 12.9 m"
+          placeholder="z. B. 12.9 m"
           value={local.perimeter}
           onChange={(e) => handleChange("perimeter", e.target.value)}
         />
@@ -548,7 +572,7 @@ export default function ProductEditPage() {
 
       <hr />
 
-      {/* ACCESSORIES */}
+      {/* ───── ACCESSORIES ───── */}
       <h3>Zubehör (Accessories)</h3>
       {local.accessories &&
         local.accessories.map((acc, idx) => (
@@ -598,7 +622,7 @@ export default function ProductEditPage() {
 
       <hr />
 
-      {/* FÜLLUNGEN (Fillings) */}
+      {/* ───── FÜLLUNGEN (Fillings) ───── */}
       <h3>Füllungen (Fillings)</h3>
       {local.fillings &&
         local.fillings.map((f, idx) => (
@@ -672,7 +696,7 @@ export default function ProductEditPage() {
 
       <hr />
 
-      {/* SAVE / CANCEL BUTTONS */}
+      {/* ───── SAVE / CANCEL BUTTONS ───── */}
       <div className="buttons">
         <button onClick={handleSave} className="btn-primary" disabled={saving}>
           {saving ? "Saving…" : "Save Product"}
