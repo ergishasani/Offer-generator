@@ -1,6 +1,5 @@
-// src/pages/ProductEditPage.jsx
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import {
   doc,
@@ -21,6 +20,10 @@ export default function ProductEditPage() {
   const { currentUser } = useAuth();
   const { productId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // If the route state included a “returnTo” URL, we’ll grab it—otherwise fall back to "/products"
+  const returnTo = location.state?.returnTo || "/products";
 
   // Firestore state
   const [product, setProduct] = useState(null);
@@ -33,7 +36,7 @@ export default function ProductEditPage() {
   const [userCategories, setUserCategories] = useState([]);
   const [allCategories, setAllCategories] = useState([]);
 
-  // 1) Listen for auth; if no user, redirect
+  // 1) if no user, redirect to login
   useEffect(() => {
     if (!currentUser) {
       navigate("/login");
@@ -135,7 +138,6 @@ export default function ProductEditPage() {
 
   // 4) Merge global + user categories whenever either changes
   useEffect(() => {
-    // We want user categories to appear after global. If desired, you can interleave or sort differently.
     setAllCategories([...globalCategories, ...userCategories]);
   }, [globalCategories, userCategories]);
 
@@ -154,17 +156,17 @@ export default function ProductEditPage() {
       <div className="product-edit-page">
         <NavBar />
         <h2>Product Not Found</h2>
-        <button onClick={() => navigate("/products")}>Back to Catalog</button>
+        <button onClick={() => navigate(returnTo)}>Back</button>
       </div>
     );
   }
 
-  // 6) Handle simple local state updates
+  // 6) Handle local state updates
   const handleChange = (field, value) => {
     setLocal((prev) => ({ ...prev, [field]: value }));
   };
 
-  // 7) Accessory / Filling CRUD (unchanged)
+  // Accessory / Filling CRUD (unchanged)
   const handleAddAccessory = () => {
     setLocal((prev) => ({
       ...prev,
@@ -215,16 +217,16 @@ export default function ProductEditPage() {
         ...local,
         updatedAt: serverTimestamp(),
       });
-      navigate("/products");
+
+      // After saving, send the user back to `returnTo`
+      navigate(returnTo);
     } catch (err) {
       console.error("Error saving product:", err);
       alert("Could not save changes. Please try again.");
-    } finally {
       setSaving(false);
     }
   };
 
-  // 9) Render the full form, including the Category dropdown
   return (
     <div className="product-edit-page">
       <NavBar />
@@ -233,7 +235,7 @@ export default function ProductEditPage() {
         (ID: <code>{product.id}</code>)
       </p>
 
-      {/* ───── Category Selection ───── */}
+      {/* Category dropdown */}
       <div className="field-group">
         <label className="label">Category</label>
         <select
@@ -241,16 +243,16 @@ export default function ProductEditPage() {
           value={local.categoryId}
           onChange={(e) => handleChange("categoryId", e.target.value)}
         >
-          <option value="">-- Keine Kategorie --</option>
+          <option value="">-- No category --</option>
           {allCategories.map((cat) => (
             <option key={cat.id} value={cat.id}>
-              {cat.name} {cat.isUserOnly ? "(Ihr)" : "(Global)"}
+              {cat.name} {cat.isUserOnly ? "(Your)" : "(Global)"}
             </option>
           ))}
         </select>
       </div>
 
-      {/* ───── BASIC WINDOW FIELDS ───── */}
+      {/* Basic fields */}
       <div className="field-group">
         <label className="label">Product Name</label>
         <input
@@ -321,11 +323,11 @@ export default function ProductEditPage() {
 
       <hr />
 
-      {/* ───── FRAME & COLORS & DIMENSIONS ───── */}
+      {/* Frame & colors & dimensions */}
       <h3>Frame &amp; Color Configuration</h3>
 
       <div className="field-group">
-        <label className="label">Rahmen (Frame Type)</label>
+        <label className="label">Frame Type</label>
         <input
           type="text"
           className="input full-width"
@@ -336,31 +338,29 @@ export default function ProductEditPage() {
 
       <div className="horizontal-group">
         <div className="field-group">
-          <label className="label">Außen Farbe (Outer Color)</label>
+          <label className="label">Outer Color</label>
           <input
             type="text"
             className="input"
-            placeholder="z. B. Anthrazitgrau Sandstruktur"
-            value={local.outerColor}
-            onChange={(e) => handleChange("outerColor", e.target.value)}
+            placeholder="e.g. Anthrazitgrau Sandstruktur"
+            value={local.colorOuter}
+            onChange={(e) => handleChange("colorOuter", e.target.value)}
           />
         </div>
         <div className="field-group">
-          <label className="label">Innen Farbe (Inner Color)</label>
+          <label className="label">Inner Color</label>
           <input
             type="text"
             className="input"
-            placeholder="z. B. Weiß mit schwarzer Dichtung"
-            value={local.innerColor}
-            onChange={(e) => handleChange("innerColor", e.target.value)}
+            placeholder="e.g. White with black seal"
+            value={local.colorInner}
+            onChange={(e) => handleChange("colorInner", e.target.value)}
           />
         </div>
       </div>
 
       <div className="field-group">
-        <label className="label">
-          Maße (Dimensions, z. B. “4250 mm × 2180 mm”)
-        </label>
+        <label className="label">Dimensions (e.g. “4250 mm × 2180 mm”)</label>
         <input
           type="text"
           className="input full-width"
@@ -370,7 +370,7 @@ export default function ProductEditPage() {
       </div>
 
       <div className="field-group">
-        <label className="label">Furnierfarbe des Rahmens (Frame Veneer Color)</label>
+        <label className="label">Frame Veneer Color</label>
         <input
           type="text"
           className="input full-width"
@@ -380,7 +380,7 @@ export default function ProductEditPage() {
       </div>
 
       <div className="field-group">
-        <label className="label">Furnierfarbe des Flügels (Sash Veneer Color)</label>
+        <label className="label">Sash Veneer Color</label>
         <input
           type="text"
           className="input full-width"
@@ -392,7 +392,7 @@ export default function ProductEditPage() {
       <div className="horizontal-group">
         <div className="field-group">
           <label className="label">
-            Farbe des Kerns &amp; Dichtung im Rahmen (Core &amp; Seal in Frame)
+            Core &amp; Seal (Frame)
           </label>
           <input
             type="text"
@@ -403,7 +403,7 @@ export default function ProductEditPage() {
         </div>
         <div className="field-group">
           <label className="label">
-            Farbe des Kerns &amp; Dichtung im Flügel (Core &amp; Seal in Sash)
+            Core &amp; Seal (Sash)
           </label>
           <input
             type="text"
@@ -415,22 +415,22 @@ export default function ProductEditPage() {
       </div>
 
       <div className="field-group">
-        <label className="label">Schwellentyp HST (Threshold Type)</label>
+        <label className="label">Threshold Type (HST)</label>
         <input
           type="text"
           className="input full-width"
-          placeholder="z. B. GU THERMO SCHWELLE 50 mm"
+          placeholder="e.g. GU THERMO SCHWELLE 50 mm"
           value={local.thresholdType}
           onChange={(e) => handleChange("thresholdType", e.target.value)}
         />
       </div>
 
       <div className="field-group">
-        <label className="label">Verschweißungsart (Welding Type)</label>
+        <label className="label">Welding Type</label>
         <input
           type="text"
           className="input full-width"
-          placeholder="z. B. V-Super"
+          placeholder="e.g. V-Super"
           value={local.weldingType}
           onChange={(e) => handleChange("weldingType", e.target.value)}
         />
@@ -438,7 +438,7 @@ export default function ProductEditPage() {
 
       <hr />
 
-      {/* ───── GLAZING & GLASS HOLDER ───── */}
+      {/* Glazing & glass holder */}
       <h3>Glazing &amp; Glass Holder</h3>
 
       <div className="field-group">
@@ -446,29 +446,29 @@ export default function ProductEditPage() {
         <input
           type="text"
           className="input full-width"
-          placeholder="z. B. 6th/14Ar/6/16Ar/6th [Ug=0.6] (48 mm)"
+          placeholder='e.g. 6th/14Ar/6/16Ar/6th [Ug=0.6] (48 mm)'
           value={local.glazing}
           onChange={(e) => handleChange("glazing", e.target.value)}
         />
       </div>
 
       <div className="field-group">
-        <label className="label">Glasleiste (Glass Holder)</label>
+        <label className="label">Glass Holder</label>
         <input
           type="text"
           className="input full-width"
-          placeholder="z. B. GLASLEISTE CLASSIC – LINE"
+          placeholder="e.g. GLASLEISTE CLASSIC – LINE"
           value={local.glassHold}
           onChange={(e) => handleChange("glassHold", e.target.value)}
         />
       </div>
 
       <div className="field-group">
-        <label className="label">Flügel (Sash Type)</label>
+        <label className="label">Sash Type</label>
         <input
           type="text"
           className="input full-width"
-          placeholder="z. B. HS8600 Skrzydło…"
+          placeholder="e.g. HS8600 …"
           value={local.sashType}
           onChange={(e) => handleChange("sashType", e.target.value)}
         />
@@ -476,15 +476,15 @@ export default function ProductEditPage() {
 
       <hr />
 
-      {/* ───── FITTING ───── */}
-      <h3>Beschlag (Fitting)</h3>
+      {/* Fitting */}
+      <h3>Fitting (Beschlag)</h3>
 
       <div className="field-group">
-        <label className="label">Beschlag (Fitting)</label>
+        <label className="label">Fitting</label>
         <input
           type="text"
           className="input full-width"
-          placeholder="z. B. HST Beschlag"
+          placeholder="e.g. HST Beschlag"
           value={local.fitting}
           onChange={(e) => handleChange("fitting", e.target.value)}
         />
@@ -492,7 +492,7 @@ export default function ProductEditPage() {
 
       <div className="horizontal-group">
         <div className="field-group">
-          <label className="label">Beschlagsart (Fitting Type)</label>
+          <label className="label">Fitting Type</label>
           <input
             type="text"
             className="input"
@@ -501,7 +501,7 @@ export default function ProductEditPage() {
           />
         </div>
         <div className="field-group">
-          <label className="label">Art der Olive (Handle Type, Inner)</label>
+          <label className="label">Handle Type (Inner)</label>
           <input
             type="text"
             className="input"
@@ -513,7 +513,7 @@ export default function ProductEditPage() {
 
       <div className="horizontal-group">
         <div className="field-group">
-          <label className="label">Drückerfarbe innen (Handle Color, Inner)</label>
+          <label className="label">Handle Color (Inner)</label>
           <input
             type="text"
             className="input"
@@ -522,7 +522,7 @@ export default function ProductEditPage() {
           />
         </div>
         <div className="field-group">
-          <label className="label">Farbe des Außengriffs (Handle Color, Outer)</label>
+          <label className="label">Handle Color (Outer)</label>
           <input
             type="text"
             className="input"
@@ -534,37 +534,37 @@ export default function ProductEditPage() {
 
       <hr />
 
-      {/* ───── ADDITIONAL SPECS ───── */}
+      {/* Additional specs */}
       <h3>Additional Specs</h3>
 
       <div className="field-group">
-        <label className="label">Wärmekoeffizient (Uw Coefficient)</label>
+        <label className="label">Uw Coefficient</label>
         <input
           type="text"
           className="input full-width"
-          placeholder="z. B. Uw = 0.90 W/m²·K"
+          placeholder="e.g. Uw = 0.90 W/m²·K"
           value={local.UwCoefficient}
           onChange={(e) => handleChange("UwCoefficient", e.target.value)}
         />
       </div>
 
       <div className="field-group">
-        <label className="label">Gewichtseinheit (Weight Unit)</label>
+        <label className="label">Weight Unit</label>
         <input
           type="text"
           className="input full-width"
-          placeholder="z. B. 564.7 Kg"
+          placeholder="e.g. 564.7 Kg"
           value={local.weightUnit}
           onChange={(e) => handleChange("weightUnit", e.target.value)}
         />
       </div>
 
       <div className="field-group">
-        <label className="label">Umrandung (Perimeter)</label>
+        <label className="label">Perimeter</label>
         <input
           type="text"
           className="input full-width"
-          placeholder="z. B. 12.9 m"
+          placeholder="e.g. 12.9 m"
           value={local.perimeter}
           onChange={(e) => handleChange("perimeter", e.target.value)}
         />
@@ -572,8 +572,8 @@ export default function ProductEditPage() {
 
       <hr />
 
-      {/* ───── ACCESSORIES ───── */}
-      <h3>Zubehör (Accessories)</h3>
+      {/* Accessories */}
+      <h3>Accessories</h3>
       {local.accessories &&
         local.accessories.map((acc, idx) => (
           <div key={idx} className="accessory-row">
@@ -583,7 +583,9 @@ export default function ProductEditPage() {
                 type="text"
                 className="input"
                 value={acc.code}
-                onChange={(e) => handleAccessoryChange(idx, "code", e.target.value)}
+                onChange={(e) =>
+                  handleAccessoryChange(idx, "code", e.target.value)
+                }
               />
             </div>
             <div className="field-group flex-2">
@@ -604,7 +606,9 @@ export default function ProductEditPage() {
                 min="1"
                 className="input"
                 value={acc.qty}
-                onChange={(e) => handleAccessoryChange(idx, "qty", e.target.value)}
+                onChange={(e) =>
+                  handleAccessoryChange(idx, "qty", e.target.value)
+                }
               />
             </div>
             <button
@@ -616,14 +620,18 @@ export default function ProductEditPage() {
             </button>
           </div>
         ))}
-      <button type="button" className="btn-add" onClick={handleAddAccessory}>
+      <button
+        type="button"
+        className="btn-add"
+        onClick={handleAddAccessory}
+      >
         + Add Accessory
       </button>
 
       <hr />
 
-      {/* ───── FÜLLUNGEN (Fillings) ───── */}
-      <h3>Füllungen (Fillings)</h3>
+      {/* Fillings */}
+      <h3>Fillings</h3>
       {local.fillings &&
         local.fillings.map((f, idx) => (
           <div key={idx} className="filling-row">
@@ -642,11 +650,13 @@ export default function ProductEditPage() {
                 rows={2}
                 className="input full-width"
                 value={f.spec}
-                onChange={(e) => handleFillingChange(idx, "spec", e.target.value)}
+                onChange={(e) =>
+                  handleFillingChange(idx, "spec", e.target.value)
+                }
               />
             </div>
             <div className="field-group small">
-              <label className="label">Maße</label>
+              <label className="label">Dimensions</label>
               <input
                 type="text"
                 className="input"
@@ -657,7 +667,7 @@ export default function ProductEditPage() {
               />
             </div>
             <div className="field-group small">
-              <label className="label">Preis (€)</label>
+              <label className="label">Price (€)</label>
               <input
                 type="number"
                 step="0.01"
@@ -690,19 +700,23 @@ export default function ProductEditPage() {
             </button>
           </div>
         ))}
-      <button type="button" className="btn-add" onClick={handleAddFilling}>
+      <button
+        type="button"
+        className="btn-add"
+        onClick={handleAddFilling}
+      >
         + Add Filling
       </button>
 
       <hr />
 
-      {/* ───── SAVE / CANCEL BUTTONS ───── */}
+      {/* SAVE / CANCEL */}
       <div className="buttons">
         <button onClick={handleSave} className="btn-primary" disabled={saving}>
           {saving ? "Saving…" : "Save Product"}
         </button>
         <button
-          onClick={() => navigate("/products")}
+          onClick={() => navigate(returnTo)}
           className="btn-secondary"
           style={{ marginLeft: "1rem" }}
         >

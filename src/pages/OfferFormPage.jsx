@@ -1,4 +1,3 @@
-// src/pages/OfferFormPage.jsx
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import DatePicker from "react-datepicker";
@@ -75,11 +74,11 @@ export default function OfferFormPage() {
       productName: "",
       quantity: 1,
       unit: "Stk",
-      unitPrice: 0.0, 
+      unitPrice: 0.0,
       vat: 19,
       discount: 0,
 
-      // “Fenster” fields (will be populated from Firestore once a product is selected):
+      // “Fenster” fields (populated from Firestore once a product is chosen):
       system: "",
       colorOuter: "",
       colorInner: "",
@@ -104,6 +103,7 @@ export default function OfferFormPage() {
       perimeter: "",
       accessories: [],
       fillings: [],
+
       images: {
         insideView: "",
         outsideView: "",
@@ -113,20 +113,34 @@ export default function OfferFormPage() {
   const [totalDiscount, setTotalDiscount] = useState(0);
 
   // ──────────────────────────────────────────────────────────────────────────────
-  // 4a) LINE TOTAL / SUBTOTAL HELPERS
+  // 4a) LINE TOTAL / SUBTOTAL HELPERS (now including “fillings”)
   // ──────────────────────────────────────────────────────────────────────────────
   const computeLineTotalNet = (item) => {
+    // 1) Base net price: qty × unitPrice × (1 – discount%).
     const qty = parseFloat(item.quantity) || 0;
-    const price = parseFloat(item.unitPrice) || 0;
-    const disc = parseFloat(item.discount) || 0;
-    const discountedPrice = price * (1 - disc / 100);
-    return qty * discountedPrice;
+    const basePrice = parseFloat(item.unitPrice) || 0;
+    const baseDisc = parseFloat(item.discount) || 0;
+    const discountedUnitPrice = basePrice * (1 - baseDisc / 100);
+    const baseNet = qty * discountedUnitPrice;
+
+    // 2) Add each filling’s own net price: (f.price × (1 – f.discountPercent/100)).
+    const fillingsNet = (item.fillings || []).reduce((sum, f) => {
+      const fPrice = parseFloat(f.price) || 0;
+      const fDiscPercent = parseFloat(f.discountPercent) || 0;
+      const fNet = fPrice * (1 - fDiscPercent / 100);
+      return sum + fNet;
+    }, 0);
+
+    return baseNet + fillingsNet;
   };
+
   const computeLineTotalGross = (item) => {
-    const net = computeLineTotalNet(item);
+    // Take the net sum and apply VAT:
+    const netSum = computeLineTotalNet(item);
     const vatRate = parseFloat(item.vat) || 0;
-    return net * (1 + vatRate / 100);
+    return netSum * (1 + vatRate / 100);
   };
+
   const computeSubTotal = () =>
     items.reduce((sum, item) => {
       return (
@@ -136,22 +150,29 @@ export default function OfferFormPage() {
           : computeLineTotalGross(item))
       );
     }, 0);
+
   const computeSubTotalAfterDiscount = () => {
     const raw = computeSubTotal();
     return raw * (1 - (parseFloat(totalDiscount) || 0) / 100);
   };
+
   const computeTotalVAT = () => {
     if (!useNetPrices) return 0;
     return items.reduce((sum, item) => {
+      // 1) compute this line’s net (including fillings)
       const netLine = computeLineTotalNet(item);
-      const netAfterGlobal = netLine * (1 - totalDiscount / 100);
+
+      // 2) apply global discount to that net
+      const netAfterGlobal = netLine * (1 - (parseFloat(totalDiscount) || 0) / 100);
+
+      // 3) compute VAT on netAfterGlobal
       const vatRate = parseFloat(item.vat) || 0;
       return sum + netAfterGlobal * (vatRate / 100);
     }, 0);
   };
 
   // ──────────────────────────────────────────────────────────────────────────────
-  // 4b) Add / Remove / Change Item
+  // 4b) ADD / REMOVE / CHANGE ITEM
   // ──────────────────────────────────────────────────────────────────────────────
   const handleAddItem = () => {
     setItems((prev) => [
@@ -190,6 +211,7 @@ export default function OfferFormPage() {
         perimeter: "",
         accessories: [],
         fillings: [],
+
         images: {
           insideView: "",
           outsideView: "",
@@ -203,16 +225,16 @@ export default function OfferFormPage() {
   };
 
   /**
-   * When a field in a ProductRow changes, call handleItemChange(itemId, fieldName, newValue).
+   * When a field changes in a ProductRow, call handleItemChange(itemId, fieldName, newValue).
    * If fieldName === "productId", we look up that product in catalogProducts and
-   * copy all of its Firestore fields into this line-item.
+   * copy all its Firestore fields (including “fillings” & “accessories”) into this line.
    */
   const handleItemChange = (id, field, value) => {
     setItems((prev) =>
       prev.map((i) => {
         if (i.id !== id) return i;
 
-        // If the user just selected a product from the dropdown:
+        // 1) If user selected a “product” from the dropdown:
         if (field === "productId") {
           const chosen = catalogProducts.find((p) => p.id === value);
           if (chosen) {
@@ -223,7 +245,7 @@ export default function OfferFormPage() {
               unitPrice: chosen.data.unitPrice ?? 0,
               vat: chosen.data.vat ?? 0,
 
-              // Copy all the “Fenster details” from Firestore:
+              // Copy all “Fenster” details from Firestore:
               system: chosen.data.system || "",
               colorOuter: chosen.data.colorOuter || "",
               colorInner: chosen.data.colorInner || "",
@@ -252,6 +274,7 @@ export default function OfferFormPage() {
               fillings: Array.isArray(chosen.data.fillings)
                 ? chosen.data.fillings
                 : [],
+
               images: chosen.data.images || {
                 insideView: "",
                 outsideView: "",
@@ -263,7 +286,7 @@ export default function OfferFormPage() {
               discount: i.discount ?? 0,
             };
           } else {
-            // If not found in catalog, just clear productName
+            // If not found in catalog → just clear productName
             return {
               ...i,
               productId: "",
@@ -272,7 +295,7 @@ export default function OfferFormPage() {
           }
         }
 
-        // Otherwise, update just that one field (quantity/discount/etc.):
+        // 2) Otherwise, update only that field:
         return {
           ...i,
           [field]: value,
@@ -306,7 +329,7 @@ export default function OfferFormPage() {
   const [reverseCharge, setReverseCharge] = useState(false);
 
   // ──────────────────────────────────────────────────────────────────────────────
-  // 7) Fetch Company Profile & Catalog Products once user is authenticated
+  // 7) FETCH COMPANY PROFILE & CATALOG PRODUCTS once user is authenticated
   // ──────────────────────────────────────────────────────────────────────────────
   const fetchLatestProfile = async () => {
     const user = auth.currentUser;
@@ -333,58 +356,61 @@ export default function OfferFormPage() {
 
   useEffect(() => {
     let unsubscribeCatalog = () => {};
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        // 7a) Company Profile
-        try {
-          const profileRef = doc(
-            db,
-            "users",
-            currentUser.uid,
-            "companyProfile",
-            "profile"
-          );
-          const profileSnap = await getDoc(profileRef);
-          if (profileSnap.exists()) {
-            setCompanyProfile(profileSnap.data());
-          }
-        } catch (err) {
-          console.error("Error loading company profile:", err);
-        }
-        setProfileLoading(false);
-
-        // 7b) Subscribe to “catalog products”
-        try {
-          const productsColRef = collection(
-            db,
-            "users",
-            currentUser.uid,
-            "products"
-          );
-          unsubscribeCatalog = onSnapshot(
-            productsColRef,
-            (snapshot) => {
-              const arr = [];
-              snapshot.forEach((docSnap) => {
-                arr.push({ id: docSnap.id, data: docSnap.data() });
-              });
-              setCatalogProducts(arr);
-              setCatalogLoading(false);
-            },
-            (error) => {
-              console.error("Error fetching catalog products:", error);
-              setCatalogLoading(false);
+    const unsubscribeAuth = onAuthStateChanged(
+      auth,
+      async (currentUser) => {
+        if (currentUser) {
+          // 7a) Load Company Profile
+          try {
+            const profileRef = doc(
+              db,
+              "users",
+              currentUser.uid,
+              "companyProfile",
+              "profile"
+            );
+            const profileSnap = await getDoc(profileRef);
+            if (profileSnap.exists()) {
+              setCompanyProfile(profileSnap.data());
             }
-          );
-        } catch (err) {
-          console.error("Error subscribing to catalog:", err);
+          } catch (err) {
+            console.error("Error loading company profile:", err);
+          }
+          setProfileLoading(false);
+
+          // 7b) Subscribe to “catalog products”
+          try {
+            const productsColRef = collection(
+              db,
+              "users",
+              currentUser.uid,
+              "products"
+            );
+            unsubscribeCatalog = onSnapshot(
+              productsColRef,
+              (snapshot) => {
+                const arr = [];
+                snapshot.forEach((docSnap) => {
+                  arr.push({ id: docSnap.id, data: docSnap.data() });
+                });
+                setCatalogProducts(arr);
+                setCatalogLoading(false);
+              },
+              (error) => {
+                console.error("Error fetching catalog products:", error);
+                setCatalogLoading(false);
+              }
+            );
+          } catch (err) {
+            console.error("Error subscribing to catalog:", err);
+            setCatalogLoading(false);
+          }
+        } else {
+          setProfileLoading(false);
           setCatalogLoading(false);
         }
-      } else {
-        setProfileLoading(false);
-        setCatalogLoading(false);
       }
-    });
+    );
 
     return () => {
       unsubscribeAuth();
@@ -393,7 +419,7 @@ export default function OfferFormPage() {
   }, []);
 
   // ──────────────────────────────────────────────────────────────────────────────
-  // 8) Generate PDF (now with safe quantity/unitPrice conversions)
+  // 8) GENERATE PDF
   // ──────────────────────────────────────────────────────────────────────────────
   const generatePDF = async () => {
     // Refresh company profile if needed
@@ -509,11 +535,12 @@ export default function OfferFormPage() {
       "Line Total",
     ];
     const tableRows = items.map((item, idx) => {
-      // Safely turn quantity into a string:
       const qtyString = (item.quantity ?? 0).toString();
-      const priceString = (Number(item.unitPrice) || 0).toFixed(2) + " €";
-
+      // Price column shows raw net (quantity×discounted + fillings)
       const rawLineNet = computeLineTotalNet(item);
+      const priceString = rawLineNet.toFixed(2) + " €";
+
+      // Then compute the “after global discount” line total:
       const rawLineGross = computeLineTotalGross(item);
       const lineAfterGlobalDisc = useNetPrices
         ? rawLineNet * (1 - (parseFloat(totalDiscount) || 0) / 100)
@@ -525,7 +552,7 @@ export default function OfferFormPage() {
         qtyString,
         item.unit,
         priceString,
-        item.vat + "%",
+        (item.vat ?? 0) + "%",
         (item.discount ?? 0) + "%",
         lineAfterGlobalDisc.toFixed(2) + " €",
       ];
@@ -626,7 +653,7 @@ export default function OfferFormPage() {
         cursorY += 120 + 8;
       }
 
-      // (7c) Rahmen details table (two columns)
+      // (7c) “Rahmen” details table (two columns)
       const frameRows = [
         ["Rahmen", item.frameType],
         ["Außen Farbe", item.colorOuter],
@@ -676,8 +703,8 @@ export default function OfferFormPage() {
       // (7d) Accessories table, if any
       if (Array.isArray(item.accessories) && item.accessories.length > 0) {
         const accRows = item.accessories.map((acc) => [
-          acc.name,
-          (acc.quantity ?? 0).toString(),
+          acc.description || acc.code,
+          (acc.qty ?? 0).toString(),
         ]);
         autoTable(doc, {
           startY: cursorY,
@@ -703,18 +730,18 @@ export default function OfferFormPage() {
       // (7e) Fillings table, if any
       if (Array.isArray(item.fillings) && item.fillings.length > 0) {
         const fillRows = item.fillings.map((f) => {
-          const netPrice = Number(f.netPrice) || 0;
-          const discPercent = parseFloat(f.discountPercent) || 0;
-          const discValue = Number(f.discountValue) || 0;
-          const totalPrice = Number(f.totalPrice) || 0;
+          const fNetPrice = parseFloat(f.price) || 0;
+          const fDiscPct = parseFloat(f.discountPercent) || 0;
+          const fDiscValue = fNetPrice * (fDiscPct / 100);
+          const fTotal = fNetPrice - fDiscValue;
           return [
             f.id,
-            f.detail,
+            f.spec,
             f.dimensions,
-            netPrice.toFixed(2) + " €",
-            discPercent + "%",
-            discValue.toFixed(2) + " €",
-            totalPrice.toFixed(2) + " €",
+            fNetPrice.toFixed(2) + " €",
+            fDiscPct + "%",
+            fDiscValue.toFixed(2) + " €",
+            fTotal.toFixed(2) + " €",
           ];
         });
         autoTable(doc, {
@@ -753,23 +780,25 @@ export default function OfferFormPage() {
         cursorY = doc.lastAutoTable.finalY + 10;
       }
 
-      // (7f) Fenster total line
+      // (7f) Fenster total line (net + VAT):
       const singleNet = computeLineTotalNet(item);
-      const singleDiscountValue =
-        singleNet * ((parseFloat(item.discount) || 0) / 100);
-      const singleAfterDisc = singleNet - singleDiscountValue;
+      // Note: item.discount has already been applied into computeLineTotalNet (base + fillings),
+      // because computeLineTotalNet’s “baseNet” calculation did “unitPrice × (1 – discount/100)”.
+      // So “singleNet” is after the *item‐level discount*. We now only need to apply “global discount”:
+      const singleAfterGlobalDisc =
+        singleNet * (1 - (parseFloat(totalDiscount) || 0) / 100);
       const singleVAT = useNetPrices
-        ? singleAfterDisc * ((parseFloat(item.vat) || 0) / 100)
+        ? singleAfterGlobalDisc * ((parseFloat(item.vat) || 0) / 100)
         : 0;
       const singleGrand = useNetPrices
-        ? singleAfterDisc + singleVAT
-        : singleAfterDisc;
+        ? singleAfterGlobalDisc + singleVAT
+        : singleAfterGlobalDisc;
 
       doc.setFontSize(10).setFont(undefined, "bold");
       doc.text(
-        `Fenster total: ${singleNet.toFixed(2)} €   - ${item.discount ?? 0}%   - ${singleDiscountValue
-          .toFixed(2)
-          .replace("-", "")} €   = ${singleGrand.toFixed(2)} €`,
+        `Fenster total: ${singleAfterGlobalDisc.toFixed(2)} €  +USt ${singleVAT.toFixed(
+          2
+        )} €  = ${singleGrand.toFixed(2)} €`,
         margin,
         cursorY
       );
@@ -1054,14 +1083,18 @@ export default function OfferFormPage() {
           <div className="net-gross-toggle">
             <button
               type="button"
-              className={`toggle-btn ${useNetPrices ? "active" : ""}`}
+              className={`toggle-btn ${
+                useNetPrices ? "active" : ""
+              }`}
               onClick={toggleNetGross}
             >
               Net
             </button>
             <button
               type="button"
-              className={`toggle-btn ${!useNetPrices ? "active" : ""}`}
+              className={`toggle-btn ${
+                !useNetPrices ? "active" : ""
+              }`}
               onClick={toggleNetGross}
             >
               Gross
@@ -1101,7 +1134,11 @@ export default function OfferFormPage() {
 
           {/* Footer Links for Adding more lines, Reset Discount */}
           <div className="products-footer-links">
-            <button type="button" className="add-link" onClick={handleAddItem}>
+            <button
+              type="button"
+              className="add-link"
+              onClick={handleAddItem}
+            >
               + Add position
             </button>
             <button
@@ -1115,7 +1152,9 @@ export default function OfferFormPage() {
 
           {/* Global Discount Input */}
           <div className="global-discount">
-            <label className="label small-label">Total Discount (%):</label>
+            <label className="label small-label">
+              Total Discount (%):
+            </label>
             <input
               type="number"
               min="0"
@@ -1130,7 +1169,9 @@ export default function OfferFormPage() {
           {/* Totals Area */}
           <div className="totals-area">
             <div className="totals-row">
-              <div className="totals-label">Subtotal (before discount):</div>
+              <div className="totals-label">
+                Subtotal (before discount):
+              </div>
               <div className="totals-value">
                 {computeSubTotal().toFixed(2)} €
               </div>
@@ -1190,7 +1231,9 @@ export default function OfferFormPage() {
               className="toggle-more"
               onClick={() => setShowMoreOptions((p) => !p)}
             >
-              {showMoreOptions ? "Hide more options" : "Show more options"}
+              {showMoreOptions
+                ? "Hide more options"
+                : "Show more options"}
             </button>
           </div>
 
@@ -1210,13 +1253,17 @@ export default function OfferFormPage() {
                   </select>
                 </div>
                 <div className="column">
-                  <label className="label">Internal Contact Person</label>
+                  <label className="label">
+                    Internal Contact Person
+                  </label>
                   <input
                     type="text"
                     className="input full-width"
                     placeholder="z. B. Rivaldo Dini"
                     value={internalContact}
-                    onChange={(e) => setInternalContact(e.target.value)}
+                    onChange={(e) =>
+                      setInternalContact(e.target.value)
+                    }
                   />
                 </div>
               </div>
@@ -1228,7 +1275,9 @@ export default function OfferFormPage() {
                     type="text"
                     className="input full-width"
                     value={deliveryConditions}
-                    onChange={(e) => setDeliveryConditions(e.target.value)}
+                    onChange={(e) =>
+                      setDeliveryConditions(e.target.value)
+                    }
                   />
                 </div>
                 <div className="column">
@@ -1237,7 +1286,9 @@ export default function OfferFormPage() {
                     type="text"
                     className="input full-width"
                     value={paymentTerms}
-                    onChange={(e) => setPaymentTerms(e.target.value)}
+                    onChange={(e) =>
+                      setPaymentTerms(e.target.value)
+                    }
                   />
                 </div>
               </div>
