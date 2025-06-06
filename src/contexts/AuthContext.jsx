@@ -3,12 +3,12 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInWithPopup,
+  signInWithPopup,         // ← make sure this is imported
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
 
-import { auth, googleProvider, appleProvider } from "../services/firebase";
+import { auth, googleProvider /*, appleProvider */ } from "../services/firebase";
 
 const AuthContext = createContext();
 
@@ -29,7 +29,6 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
-
   // 2) Email/Password Registration
   function registerWithEmail(email, password) {
     return createUserWithEmailAndPassword(auth, email, password);
@@ -40,15 +39,15 @@ export function AuthProvider({ children }) {
     return signInWithEmailAndPassword(auth, email, password);
   }
 
-  // 4) Sign in with Google
+  // 4) Sign in with Google (switch to popup)
   function loginWithGoogle() {
     return signInWithPopup(auth, googleProvider);
   }
 
-  // 5) Sign in with Apple
-  function loginWithApple() {
-    return signInWithPopup(auth, appleProvider);
-  }
+  // 5) (Optional) Sign in with Apple, if you have appleProvider configured:
+  // function loginWithApple() {
+  //   return signInWithPopup(auth, appleProvider);
+  // }
 
   // 6) Sign out
   function logout() {
@@ -60,8 +59,8 @@ export function AuthProvider({ children }) {
     registerWithEmail,
     loginWithEmail,
     loginWithGoogle,
-    loginWithApple,
-    logout,
+    // loginWithApple,
+    logout
   };
 
   return (

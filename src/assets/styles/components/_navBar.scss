@@ -1,42 +1,42 @@
-.nav-bar {
+// src/assets/styles/components/_navBar.scss
+.navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 1rem;
-  background: #f5f5f5;
-  border-bottom: 1px solid #ddd;
+  padding: 1rem 2rem;
+  background: #4d90fe;
+  color: #fff;
 
-  .nav-left {
-    display: flex;
-    align-items: center;
-
-    .nav-brand {
-      font-weight: bold;
-      margin-right: 1rem;
-      text-decoration: none;
-      color: inherit;
-    }
-
-    .nav-link {
-      margin-right: 1rem;
-      text-decoration: none;
-      color: inherit;
-    }
+  .navbar-logo {
+    font-size: 1.25rem;
+    color: #fff;
+    text-decoration: none;
+    font-weight: bold;
   }
 
-  .nav-right {
+  .navbar-right {
     display: flex;
     align-items: center;
 
-    .user-email {
-      margin-right: 0.5rem;
-      font-size: 0.9rem;
-      color: #555;
+    .navbar-user {
+      margin-right: 1rem;
+      font-size: 0.95rem;
     }
 
-    .btn-logout {
-      padding: 0.3rem 0.6rem;
+    .btn-logout,
+    .btn-login {
+      background: #fff;
+      color: #4d90fe;
+      border: none;
+      border-radius: 4px;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
       cursor: pointer;
+      text-decoration: none;
+
+      &:hover {
+        opacity: 0.9;
+      }
     }
   }
 }

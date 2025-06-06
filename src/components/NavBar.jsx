@@ -1,6 +1,8 @@
+// src/components/NavBar.jsx
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+
 import "../assets/styles/components/_navBar.scss";
 
 export default function NavBar() {
@@ -10,32 +12,31 @@ export default function NavBar() {
   const handleLogout = async () => {
     try {
       await logout();
-      navigate("/signin");
+      navigate("/login"); // <— now navigates to the real /login route
     } catch (err) {
-      console.error("Logout failed", err);
+      console.error("Logout failed:", err);
     }
   };
 
   return (
-    <nav className="nav-bar">
-      <div className="nav-left">
-        <Link to="/offers/new" className="nav-brand">
-          Offer Generator
-        </Link>
-        <Link to="/offers/new" className="nav-link">
-          New Offer
-        </Link>
-        <Link to="/profile" className="nav-link">
-          Profile
-        </Link>
-      </div>
-      <div className="nav-right">
-        {currentUser && (
-          <span className="user-email">{currentUser.email}</span>
+    <nav className="navbar">
+      <Link to="/offers/new" className="navbar-logo">
+        MyOffersApp
+      </Link>
+
+      <div className="navbar-right">
+        {currentUser ? (
+          <>
+            <span className="navbar-user">Hi, {currentUser.email}</span>
+            <button onClick={handleLogout} className="btn-logout">
+              Log out
+            </button>
+          </>
+        ) : (
+          <Link to="/login" className="btn-login">
+            Log in
+          </Link>
         )}
-        <button onClick={handleLogout} className="btn-logout">
-          Logout
-        </button>
       </div>
     </nav>
   );
