@@ -1,11 +1,12 @@
 // src/App.jsx
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
+import { useAuth, AuthProvider } from "./contexts/AuthContext";
 import NavBar from "./components/NavBar";
 
-// --- IMPORT OUR NEW PAGES ---
+// --- IMPORT YOUR PAGES ---
 import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 import ProfilePage from "./pages/ProfilePage";
 
 import ProductsPage from "./pages/ProductsPage";
@@ -13,42 +14,94 @@ import ProductEditPage from "./pages/ProductEditPage";
 
 import OfferFormPage from "./pages/OfferFormPage";
 import ProductCatalogEditPage from "./pages/CatalogPage";
-import Offers from "./pages/OffersPage";
-// If you have a separate “ProductRowEditPage” (for editing within an Offer),
-// adjust accordingly—here we only show the “catalog” version.
+import OffersPage from "./pages/OffersPage";
+
+function PrivateRoute({ children }) {
+  const { currentUser } = useAuth();
+  // If not logged in, redirect to /login
+  return currentUser ? children : <Navigate to="/login" replace />;
+}
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        {/* The NavBar will always be rendered; it can read currentUser/logout via useAuth() */}
         <NavBar />
 
         <Routes>
-          {/* Public */}
+          {/*─────────────────────────────────────*/}
+          {/* 1) PUBLIC ROUTES                     */}
+          {/*─────────────────────────────────────*/}
+
+          {/* Login and Registration */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
+          {/* If the user goes to the root ("/"), redirect to /products (or /offers). */}
+          <Route path="/" element={<Navigate to="/products" replace />} />
 
-          <Route path="/offers" element={<Offers />} />
+          {/*─────────────────────────────────────*/}
+          {/* 2) PRIVATE ROUTES (require login)    */}
+          {/*─────────────────────────────────────*/}
 
-          {/* Profile */}
-          <Route path="/profile" element={<ProfilePage />} />
-
-          {/* Product Catalog */}
-          <Route path="/products" element={<ProductsPage />} />
+          {/* Offer Listing + Editing */}
           <Route
-            path="/products/:productId/edit"
-            element={<ProductEditPage />}
+            path="/offers"
+            element={
+              <PrivateRoute>
+                <OffersPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/offers/:offerId"
+            element={
+              <PrivateRoute>
+                <OfferFormPage />
+              </PrivateRoute>
+            }
           />
 
-          <Route path="/catalog" element={<ProductCatalogEditPage />} />
+          {/* Profile */}
+          <Route
+            path="/profile"
+            element={
+              <PrivateRoute>
+                <ProfilePage />
+              </PrivateRoute>
+            }
+          />
 
-          {/* Offer & Product‐in‐Offer editing */}
-          <Route path="/offers/:offerId" element={<OfferFormPage />} />
-          {/* If you do have a /offers/:offerId/products/:itemIndex/edit route,
-              you can add something like this: */}
-          {/* <Route path="/offers/:offerId/products/:itemIndex/edit" element={<ProductRowEditPage />} /> */}
+          {/* Product Catalog */}
+          <Route
+            path="/catalog"
+            element={
+              <PrivateRoute>
+                <ProductCatalogEditPage />
+              </PrivateRoute>
+            }
+          />
 
-          {/* Catch‐all → redirect to /products or /offers/new as needed */}
+          {/* Products List & Edit */}
+          <Route
+            path="/products"
+            element={
+              <PrivateRoute>
+                <ProductsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/products/:productId/edit"
+            element={
+              <PrivateRoute>
+                <ProductEditPage />
+              </PrivateRoute>
+            }
+          />
+
+          {/* Catch‐all → redirect to /products */}
           <Route path="*" element={<Navigate to="/products" replace />} />
         </Routes>
       </BrowserRouter>

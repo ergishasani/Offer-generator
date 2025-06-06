@@ -1,8 +1,50 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId}/companyProfile/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+    // 1) Global categories & products (readable by anyone; writeable by ADMIN_UID)
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null && request.auth.uid == "ADMIN_UID";
+    }
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null && request.auth.uid == "ADMIN_UID";
+    }
+
+    // 2) Users subtree
+    match /users/{userId} {
+      allow read, write: if false; // block direct /users read/write
+
+      // (a) Company profile
+      match /companyProfile/profile {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // (b) Catalog products
+      match /products/{productId} {
+        allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // (c) User categories
+      match /categories/{categoryId} {
+        allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // (d) Offers
+      match /offers/{offerId} {
+        allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // (e) (Optional) other user subcollections…
+      // match /otherCollection/{docId} {
+      //   allow read, write: if request.auth != null && request.auth.uid == userId;
+      // }
+    }
+
+    // 3) Deny everything else
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
