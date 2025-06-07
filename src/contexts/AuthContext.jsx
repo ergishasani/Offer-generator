@@ -7,75 +7,67 @@ import {
   signInWithPopup,
   signOut,
   onAuthStateChanged,
+  getIdTokenResult,
 } from "firebase/auth";
 
 import { auth, googleProvider } from "../services/firebase";
 
 const AuthContext = createContext();
 
-/**
+/** 
  * Custom hook to grab the AuthContext value.
+ * Will throw if used outside of <AuthProvider>
  */
 export function useAuth() {
-  return useContext(AuthContext);
+  const ctx = useContext(AuthContext);
+  if (ctx === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return ctx;
 }
 
 /**
- * AuthProvider wraps your entire app (or at least 
- * the portion that needs authentication).
- * It keeps track of currentUser and exposes:
- *   - registerWithEmail(email, password)
- *   - loginWithEmail(email, password)
- *   - loginWithGoogle()
- *   - logout()
+ * Wrap your app in <AuthProvider> so you can:
+ *  - access currentUser (with .admin flag)
+ *  - call registerWithEmail, loginWithEmail, loginWithGoogle, logout
  */
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]       = useState(true);
 
-  // Listen for Firebase Auth state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // force-refresh token to get latest custom claims
+        const tokenResult = await getIdTokenResult(user, true);
+        // attach an `admin` boolean flag
+        user.admin = !!tokenResult.claims.admin;
+      }
       setCurrentUser(user);
       setLoading(false);
     });
-    return () => unsubscribe();
+    return unsubscribe;
   }, []);
 
-  /**
-   * Register a new account via email & password.
-   * Returns a Promise.
-   */
+  // --- auth action helpers ---
   function registerWithEmail(email, password) {
     return createUserWithEmailAndPassword(auth, email, password);
   }
 
-  /**
-   * Log in with email & password.
-   * Returns a Promise.
-   */
   function loginWithEmail(email, password) {
     return signInWithEmailAndPassword(auth, email, password);
   }
 
-  /**
-   * Log in with Google (popup).
-   * Returns a Promise.
-   */
   function loginWithGoogle() {
     return signInWithPopup(auth, googleProvider);
   }
 
-  /**
-   * Log out the current user.
-   * Returns a Promise.
-   */
   function logout() {
     return signOut(auth);
   }
 
   const value = {
-    currentUser,
+    currentUser,        // includes .admin flag
     registerWithEmail,
     loginWithEmail,
     loginWithGoogle,
@@ -84,7 +76,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {/* Don’t render children until we know auth state */}
+      {/* only render once we've determined auth state */}
       {!loading && children}
     </AuthContext.Provider>
   );

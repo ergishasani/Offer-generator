@@ -2,49 +2,69 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 1) Global categories & products (readable by anyone; writeable by ADMIN_UID)
+    //────────────────────────────────────────────────────────────────────────────
+    // 1) GLOBAL CATEGORIES & PRODUCTS
+    //    → Anyone can read; only admins may create/update/delete
+    //────────────────────────────────────────────────────────────────────────────
     match /categories/{categoryId} {
       allow read: if true;
-      allow create, update, delete: if request.auth != null && request.auth.uid == "ADMIN_UID";
+      allow create, update, delete:
+        if request.auth != null
+        && request.auth.token.admin == true;
     }
     match /products/{productId} {
       allow read: if true;
-      allow create, update, delete: if request.auth != null && request.auth.uid == "ADMIN_UID";
+      allow create, update, delete:
+        if request.auth != null
+        && request.auth.token.admin == true;
     }
 
-    // 2) Users subtree
-    match /users/{userId} {
-      allow read, write: if false; // block direct /users read/write
+    //────────────────────────────────────────────────────────────────────────────
+    // 2) OFFERS COLLECTION
+    //    → Anyone authenticated can create their own offers;
+    //       Reads/updates/deletes only by owner or admin.
+    //    → Assumes each offer doc has a `createdBy` field == UID of creator.
+    //────────────────────────────────────────────────────────────────────────────
+    match /offers/{offerId} {
+      // CREATE: must be logged in, and the new doc’s createdBy must match your UID
+      allow create: if request.auth != null
+                   && request.resource.data.createdBy == request.auth.uid;
 
-      // (a) Company profile
-      match /companyProfile/profile {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-
-      // (b) Catalog products
-      match /products/{productId} {
-        allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
-      }
-
-      // (c) User categories
-      match /categories/{categoryId} {
-        allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
-      }
-
-      // (d) Offers
-      match /offers/{offerId} {
-        allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
-      }
-
-      // (e) (Optional) other user subcollections…
-      // match /otherCollection/{docId} {
-      //   allow read, write: if request.auth != null && request.auth.uid == userId;
-      // }
+      // READ/UPDATE/DELETE: must be owner or admin
+      allow read, update, delete:
+        if request.auth != null
+        && (
+             resource.data.createdBy == request.auth.uid
+             || request.auth.token.admin == true
+           );
     }
 
-    // 3) Deny everything else
+    //────────────────────────────────────────────────────────────────────────────
+    // 3) (Optional) Any other per-user subcollections under /users/{uid}/…
+    //────────────────────────────────────────────────────────────────────────────
+    match /users/{userId}/{doc=**} {
+      allow read, write:
+        if request.auth != null
+        && request.auth.uid == userId;
+    }
+
+    //────────────────────────────────────────────────────────────────────────────
+    // 4) DENY EVERYTHING ELSE
+    //────────────────────────────────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
     }
+
+    // in your Firestore rules
+    match /products/{productId} {
+      // anyone—logged in or not—can read the shared catalog:
+      allow read: if true;
+
+      // only admins (custom‐claim `admin: true`) can add/update/delete:
+      allow create, update, delete:
+        if request.auth != null
+        && request.auth.token.admin == true;
+    }
+      
   }
 }

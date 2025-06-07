@@ -1,14 +1,17 @@
 // src/services/offerService.js
-import { db } from "./firebase";
+
+import { db, storage } from "./firebase";
 import {
   doc,
   addDoc,
   getDoc,
   updateDoc,
+  deleteDoc,
   collection,
   serverTimestamp,
   getDocs,
 } from "firebase/firestore";
+import { ref as storageRef, getDownloadURL } from "firebase/storage";
 
 // Reference to your “offers” collection
 const offersCol = collection(db, "offers");
@@ -77,13 +80,69 @@ export async function getDraftById(offerId) {
 export async function listAllDrafts() {
   try {
     const querySnapshot = await getDocs(offersCol);
-    const results = [];
-    querySnapshot.forEach((docSnap) => {
-      results.push({ id: docSnap.id, ...docSnap.data() });
-    });
-    return results;
+    return querySnapshot.docs.map(docSnap => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    }));
   } catch (err) {
     console.error("Error listing all drafts:", err);
+    throw err;
+  }
+}
+
+/**
+ * Download the stored PDF for an offer.
+ */
+export async function downloadOfferPdf(offerId) {
+  try {
+    // assumes you upload PDFs under storage path `offers/${offerId}.pdf`
+    const pdfRef = storageRef(storage, `offers/${offerId}.pdf`);
+    const url = await getDownloadURL(pdfRef);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${offerId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch (err) {
+    console.error("Error downloading offer PDF:", err);
+    throw err;
+  }
+}
+
+/**
+ * Resend an offer by hitting your backend/Cloud Function.
+ */
+export async function resendOffer(offerId) {
+  try {
+    const res = await fetch(
+      `https://us-central1-your-project.cloudfunctions.net/resendOffer`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ offerId }),
+      }
+    );
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Resend failed: ${body}`);
+    }
+    return await res.json();
+  } catch (err) {
+    console.error("Error resending offer:", err);
+    throw err;
+  }
+}
+
+/**
+ * Delete an offer document (and any other clean-up you need).
+ */
+export async function deleteOffer(offerId) {
+  try {
+    const docRef = doc(db, "offers", offerId);
+    await deleteDoc(docRef);
+  } catch (err) {
+    console.error("Error deleting offer:", err);
     throw err;
   }
 }

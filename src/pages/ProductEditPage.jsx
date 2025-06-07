@@ -1,3 +1,4 @@
+// src/pages/ProductEditPage.jsx
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -18,139 +19,131 @@ import "../assets/styles/pages/_productEditPage.scss";
 
 export default function ProductEditPage() {
   const { currentUser } = useAuth();
-  const { productId } = useParams();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const { productId }   = useParams();
+  const navigate        = useNavigate();
+  const location        = useLocation();
+  const returnTo        = location.state?.returnTo || "/products";
 
-  // If the route state included a “returnTo” URL, we’ll grab it—otherwise fall back to "/products"
-  const returnTo = location.state?.returnTo || "/products";
+  // New: track whether this is a global (admin) product
+  const [isGlobal, setIsGlobal] = useState(false);
 
-  // Firestore state
+  // Firestore + local state
   const [product, setProduct] = useState(null);
-  const [local, setLocal] = useState(null);
+  const [local,   setLocal]   = useState(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saving,  setSaving]  = useState(false);
 
-  // Category state: global + user-specific
+  // Categories
   const [globalCategories, setGlobalCategories] = useState([]);
-  const [userCategories, setUserCategories] = useState([]);
-  const [allCategories, setAllCategories] = useState([]);
+  const [userCategories,   setUserCategories]   = useState([]);
+  const [allCategories,    setAllCategories]    = useState([]);
 
-  // 1) if no user, redirect to login
+  // 1) Redirect if not logged in
   useEffect(() => {
-    if (!currentUser) {
-      navigate("/login");
-    }
+    if (!currentUser) navigate("/login");
   }, [currentUser, navigate]);
 
-  // 2) Fetch the product document and initialize local state
+  // 2) Fetch either global (if admin) or user product
   useEffect(() => {
     if (!currentUser) return;
 
-    const docRef = doc(db, "users", currentUser.uid, "products", productId);
-    getDoc(docRef)
-      .then((snap) => {
-        if (!snap.exists()) {
-          setProduct(null);
-          setLocal(null);
-        } else {
-          const data = snap.data();
-          setProduct({ id: snap.id, ...data });
-
-          // Initialize local copy, making sure categoryId is present
-          setLocal({
-            categoryId: data.categoryId || "",
-            productName: data.productName || "",
-            quantity: data.quantity ?? 1,
-            unit: data.unit || "Stk",
-            unitPrice: data.unitPrice ?? 0.0,
-            vat: data.vat ?? 19,
-            discount: data.discount ?? 0,
-            frameType: data.frameType || "",
-            outerColor: data.outerColor || "",
-            innerColor: data.innerColor || "",
-            dimensions: data.dimensions || "",
-            frameVeneerColor: data.frameVeneerColor || "",
-            sashVeneerColor: data.sashVeneerColor || "",
-            coreSealFrame: data.coreSealFrame || "",
-            coreSealSash: data.coreSealSash || "",
-            thresholdType: data.thresholdType || "",
-            weldingType: data.weldingType || "",
-            glazing: data.glazing || "",
-            glassHold: data.glassHold || "",
-            sashType: data.sashType || "",
-            fitting: data.fitting || "",
-            fittingType: data.fittingType || "",
-            handleTypeInner: data.handleTypeInner || "",
-            handleColorInner: data.handleColorInner || "",
-            handleColorOuter: data.handleColorOuter || "",
-            UwCoefficient: data.UwCoefficient || "",
-            weightUnit: data.weightUnit || "",
-            perimeter: data.perimeter || "",
-            accessories: Array.isArray(data.accessories) ? data.accessories : [],
-            fillings: Array.isArray(data.fillings) ? data.fillings : [],
-          });
+    (async () => {
+      let snap = null;
+      let data = null;
+      // Try global first for admins
+      if (currentUser.admin) {
+        const globalRef = doc(db, "products", productId);
+        const gSnap = await getDoc(globalRef);
+        if (gSnap.exists()) {
+          setIsGlobal(true);
+          snap = gSnap;
         }
-      })
-      .catch((err) => {
-        console.error("Error fetching product:", err);
-      })
-      .finally(() => {
+      }
+      // Otherwise, or if global not found, fall back to user path
+      if (!snap) {
+        const userRef = doc(db, "users", currentUser.uid, "products", productId);
+        const uSnap = await getDoc(userRef);
+        if (uSnap.exists()) {
+          setIsGlobal(false);
+          snap = uSnap;
+        }
+      }
+      if (!snap) {
+        setProduct(null);
+        setLocal(null);
         setLoading(false);
+        return;
+      }
+      data = snap.data();
+      setProduct({ id: snap.id, ...data });
+      setLocal({
+        categoryId:        data.categoryId || "",
+        productName:       data.productName || "",
+        quantity:          data.quantity ?? 1,
+        unit:              data.unit || "Stk",
+        unitPrice:         data.unitPrice ?? 0.0,
+        vat:               data.vat ?? 19,
+        discount:          data.discount ?? 0,
+        frameType:         data.frameType || "",
+        outerColor:        data.outerColor || "",
+        innerColor:        data.innerColor || "",
+        dimensions:        data.dimensions || "",
+        frameVeneerColor:  data.frameVeneerColor || "",
+        sashVeneerColor:   data.sashVeneerColor || "",
+        coreSealFrame:     data.coreSealFrame || "",
+        coreSealSash:      data.coreSealSash || "",
+        thresholdType:     data.thresholdType || "",
+        weldingType:       data.weldingType || "",
+        glazing:           data.glazing || "",
+        glassHold:         data.glassHold || "",
+        sashType:          data.sashType || "",
+        fitting:           data.fitting || "",
+        fittingType:       data.fittingType || "",
+        handleTypeInner:   data.handleTypeInner || "",
+        handleColorInner:  data.handleColorInner || "",
+        handleColorOuter:  data.handleColorOuter || "",
+        UwCoefficient:     data.UwCoefficient || "",
+        weightUnit:        data.weightUnit || "",
+        perimeter:         data.perimeter || "",
+        accessories:       Array.isArray(data.accessories) ? data.accessories : [],
+        fillings:          Array.isArray(data.fillings) ? data.fillings : [],
       });
+      setLoading(false);
+    })();
   }, [currentUser, productId, navigate]);
 
-  // 3) Subscribe to both global and user-specific categories
+  // 3) Subscribe to global + user categories
   useEffect(() => {
     if (!currentUser) return;
 
-    // 3a) global (root) categories
-    const qGlobalCats = query(
-      collection(db, "categories"),
-      orderBy("name", "asc")
+    const qGlobal = query(collection(db, "categories"), orderBy("name", "asc"));
+    const unsubG  = onSnapshot(qGlobal, snap =>
+      setGlobalCategories(snap.docs.map(d => ({ id: d.id, name: d.data().name, isUserOnly: false })))
     );
-    const unsubGlobal = onSnapshot(qGlobalCats, (snap) => {
-      const arr = [];
-      snap.forEach((docSnap) => {
-        arr.push({ id: docSnap.id, name: docSnap.data().name, isUserOnly: false });
-      });
-      setGlobalCategories(arr);
-    });
 
-    // 3b) user-specific categories
-    const qUserCats = query(
+    const qUser = query(
       collection(db, "users", currentUser.uid, "categories"),
       orderBy("name", "asc")
     );
-    const unsubUser = onSnapshot(qUserCats, (snap) => {
-      const arr = [];
-      snap.forEach((docSnap) => {
-        arr.push({ id: docSnap.id, name: docSnap.data().name, isUserOnly: true });
-      });
-      setUserCategories(arr);
-    });
+    const unsubU = onSnapshot(qUser, snap =>
+      setUserCategories(snap.docs.map(d => ({ id: d.id, name: d.data().name, isUserOnly: true })))
+    );
 
     return () => {
-      unsubGlobal();
-      unsubUser();
+      unsubG();
+      unsubU();
     };
   }, [currentUser]);
 
-  // 4) Merge global + user categories whenever either changes
+  // 4) Merge
   useEffect(() => {
     setAllCategories([...globalCategories, ...userCategories]);
   }, [globalCategories, userCategories]);
 
-  // 5) Early returns while loading or product not found
+  // 5) Early returns
   if (loading) {
-    return (
-      <div className="product-edit-page">
-        <NavBar />
-        <p>Loading product…</p>
-      </div>
-    );
+    return <div className="product-edit-page"><NavBar /><p>Loading product…</p></div>;
   }
-
   if (!product) {
     return (
       <div className="product-edit-page">
@@ -161,64 +154,59 @@ export default function ProductEditPage() {
     );
   }
 
-  // 6) Handle local state updates
+  // 6) Local updates
   const handleChange = (field, value) => {
-    setLocal((prev) => ({ ...prev, [field]: value }));
+    setLocal(prev => ({ ...prev, [field]: value }));
   };
 
-  // Accessory / Filling CRUD (unchanged)
+  // Accessories / Fillings (unchanged)
   const handleAddAccessory = () => {
-    setLocal((prev) => ({
+    setLocal(prev => ({
       ...prev,
       accessories: [...(prev.accessories || []), { code: "", description: "", qty: 1 }],
     }));
   };
-  const handleAccessoryChange = (index, field, value) => {
-    const updated = [...(local.accessories || [])];
-    updated[index][field] = field === "qty" ? Number(value) : value;
-    setLocal((prev) => ({ ...prev, accessories: updated }));
+  const handleAccessoryChange = (i, field, value) => {
+    const arr = [...(local.accessories || [])];
+    arr[i][field] = field === "qty" ? Number(value) : value;
+    setLocal(prev => ({ ...prev, accessories: arr }));
   };
-  const handleRemoveAccessory = (index) => {
-    const updated = [...(local.accessories || [])];
-    updated.splice(index, 1);
-    setLocal((prev) => ({ ...prev, accessories: updated }));
+  const handleRemoveAccessory = i => {
+    const arr = [...(local.accessories || [])];
+    arr.splice(i, 1);
+    setLocal(prev => ({ ...prev, accessories: arr }));
   };
 
   const handleAddFilling = () => {
-    setLocal((prev) => ({
+    setLocal(prev => ({
       ...prev,
-      fillings: [
-        ...(prev.fillings || []),
-        { id: "", spec: "", dimensions: "", price: 0.0, discountPercent: 0 },
-      ],
+      fillings: [...(prev.fillings || []), { id: "", spec: "", dimensions: "", price: 0.0, discountPercent: 0 }],
     }));
   };
-  const handleFillingChange = (index, field, value) => {
-    const updated = [...(local.fillings || [])];
-    if (field === "price" || field === "discountPercent") {
-      updated[index][field] = Number(value);
-    } else {
-      updated[index][field] = value;
-    }
-    setLocal((prev) => ({ ...prev, fillings: updated }));
+  const handleFillingChange = (i, field, value) => {
+    const arr = [...(local.fillings || [])];
+    arr[i][field] = (field === "price" || field === "discountPercent") ? Number(value) : value;
+    setLocal(prev => ({ ...prev, fillings: arr }));
   };
-  const handleRemoveFilling = (index) => {
-    const updated = [...(local.fillings || [])];
-    updated.splice(index, 1);
-    setLocal((prev) => ({ ...prev, fillings: updated }));
+  const handleRemoveFilling = i => {
+    const arr = [...(local.fillings || [])];
+    arr.splice(i, 1);
+    setLocal(prev => ({ ...prev, fillings: arr }));
   };
 
-  // 8) Save back to Firestore
+  // 8) SAVE: write to /products/{id} if admin & global exists; otherwise user subcollection
   const handleSave = async () => {
     setSaving(true);
     try {
-      const docRef = doc(db, "users", currentUser.uid, "products", productId);
-      await updateDoc(docRef, {
+      const ref = isGlobal
+        ? doc(db, "products", productId)
+        : doc(db, "users", currentUser.uid, "products", productId);
+
+      await updateDoc(ref, {
         ...local,
         updatedAt: serverTimestamp(),
       });
 
-      // After saving, send the user back to `returnTo`
       navigate(returnTo);
     } catch (err) {
       console.error("Error saving product:", err);
@@ -231,9 +219,7 @@ export default function ProductEditPage() {
     <div className="product-edit-page">
       <NavBar />
       <h2>Edit Catalog Product</h2>
-      <p>
-        (ID: <code>{product.id}</code>)
-      </p>
+      <p>(ID: <code>{product.id}</code>)</p>
 
       {/* Category dropdown */}
       <div className="field-group">
@@ -241,16 +227,17 @@ export default function ProductEditPage() {
         <select
           className="select full-width"
           value={local.categoryId}
-          onChange={(e) => handleChange("categoryId", e.target.value)}
+          onChange={e => handleChange("categoryId", e.target.value)}
         >
           <option value="">-- No category --</option>
-          {allCategories.map((cat) => (
+          {allCategories.map(cat => (
             <option key={cat.id} value={cat.id}>
               {cat.name} {cat.isUserOnly ? "(Your)" : "(Global)"}
             </option>
           ))}
         </select>
       </div>
+
 
       {/* Basic fields */}
       <div className="field-group">
@@ -709,20 +696,15 @@ export default function ProductEditPage() {
       </button>
 
       <hr />
-
       {/* SAVE / CANCEL */}
-      <div className="buttons">
-        <button onClick={handleSave} className="btn-primary" disabled={saving}>
-          {saving ? "Saving…" : "Save Product"}
-        </button>
-        <button
-          onClick={() => navigate(returnTo)}
-          className="btn-secondary"
-          style={{ marginLeft: "1rem" }}
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
-}
+            <div className="buttons">
+              <button onClick={handleSave} className="btn-primary" disabled={saving}>
+                {saving ? "Saving…" : "Save Product"}
+              </button>
+              <button onClick={() => navigate(returnTo)} className="btn-secondary" style={{ marginLeft: "1rem" }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        );
+      }

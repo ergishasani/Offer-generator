@@ -1,7 +1,8 @@
 // src/App.jsx
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useAuth, AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import { useAuth } from "./contexts/AuthContext";
 import NavBar from "./components/NavBar";
 
 // --- IMPORT YOUR PAGES ---
@@ -16,36 +17,37 @@ import OfferFormPage from "./pages/OfferFormPage";
 import ProductCatalogEditPage from "./pages/CatalogPage";
 import OffersPage from "./pages/OffersPage";
 
+// --- IMPORT ADMIN PAGES ---
+import AdminPanel from "./pages/AdminPanel";
+import AdminOffers from "./pages/AdminOffers";
+import AdminUsers from "./pages/AdminUsers";
+// ← NEW import:
+import AdminCatalogEditor from "./pages/AdminCatalogEditor";
+
 function PrivateRoute({ children }) {
   const { currentUser } = useAuth();
-  // If not logged in, redirect to /login
   return currentUser ? children : <Navigate to="/login" replace />;
+}
+
+function AdminRoute({ children }) {
+  const { currentUser } = useAuth();
+  return currentUser?.admin ? children : <Navigate to="/" replace />;
 }
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        {/* The NavBar will always be rendered; it can read currentUser/logout via useAuth() */}
+        {/* always show nav */}
         <NavBar />
 
         <Routes>
-          {/*─────────────────────────────────────*/}
-          {/* 1) PUBLIC ROUTES                     */}
-          {/*─────────────────────────────────────*/}
-
-          {/* Login and Registration */}
-          <Route path="/login" element={<LoginPage />} />
+          {/* ───────────── PUBLIC ───────────── */}
+          <Route path="/login"  element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-
-          {/* If the user goes to the root ("/"), redirect to /products (or /offers). */}
           <Route path="/" element={<Navigate to="/products" replace />} />
 
-          {/*─────────────────────────────────────*/}
-          {/* 2) PRIVATE ROUTES (require login)    */}
-          {/*─────────────────────────────────────*/}
-
-          {/* Offer Listing + Editing */}
+          {/* ─────────── PRIVATE (requires auth) ─────────── */}
           <Route
             path="/offers"
             element={
@@ -62,8 +64,6 @@ function App() {
               </PrivateRoute>
             }
           />
-
-          {/* Profile */}
           <Route
             path="/profile"
             element={
@@ -72,8 +72,6 @@ function App() {
               </PrivateRoute>
             }
           />
-
-          {/* Product Catalog */}
           <Route
             path="/catalog"
             element={
@@ -82,8 +80,6 @@ function App() {
               </PrivateRoute>
             }
           />
-
-          {/* Products List & Edit */}
           <Route
             path="/products"
             element={
@@ -101,7 +97,46 @@ function App() {
             }
           />
 
-          {/* Catch‐all → redirect to /products */}
+          {/* ─────────── ADMIN (requires admin claim) ─────────── */}
+          {/** Consume useAuth() *inside* AuthProvider **/
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <AdminPanel />
+                </AdminRoute>
+              }
+            />
+          }
+          {/** Manage Offers */}
+          <Route
+            path="/admin/offers"
+            element={
+              <AdminRoute>
+                <AdminOffers />
+              </AdminRoute>
+            }
+          />
+          {/** Manage Users */}
+          <Route
+            path="/admin/users"
+            element={
+              <AdminRoute>
+                <AdminUsers />
+              </AdminRoute>
+            }
+          />
+          {/** ─── NEW: Global Catalog Editor for Admins ─── */}
+          <Route
+            path="/admin/catalog"
+            element={
+              <AdminRoute>
+                <AdminCatalogEditor />
+              </AdminRoute>
+            }
+          />
+
+          {/* catch‐all */}
           <Route path="*" element={<Navigate to="/products" replace />} />
         </Routes>
       </BrowserRouter>

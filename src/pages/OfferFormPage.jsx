@@ -1,5 +1,5 @@
+// src/pages/OfferFormPage.jsx
 import React, { useState, useEffect } from "react";
-
 import DatePicker from "react-datepicker";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -19,7 +19,6 @@ import "react-datepicker/dist/react-datepicker.css";
 import "../assets/styles/pages/_offerFormPage.scss";
 
 export default function OfferFormPage() {
-
   // ──────────────────────────────────────────────────────────────────────────────
   // 1) COMPANY PROFILE STATE (fetched from Firestore)
   // ──────────────────────────────────────────────────────────────────────────────
@@ -37,8 +36,10 @@ export default function OfferFormPage() {
   const [profileLoading, setProfileLoading] = useState(true);
 
   // ──────────────────────────────────────────────────────────────────────────────
-  // 2) CATALOG PRODUCTS (Firestore “users/{uid}/products”)
+  // 2) CATALOG PRODUCTS: user‐specific + global
   // ──────────────────────────────────────────────────────────────────────────────
+  const [userCatalog, setUserCatalog] = useState([]);
+  const [globalCatalog, setGlobalCatalog] = useState([]);
   const [catalogProducts, setCatalogProducts] = useState([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
 
@@ -76,8 +77,7 @@ export default function OfferFormPage() {
       unitPrice: 0.0,
       vat: 19,
       discount: 0,
-
-      // “Fenster” fields (populated from Firestore once a product is chosen):
+      // All “Fenster” fields:
       system: "",
       colorOuter: "",
       colorInner: "",
@@ -102,7 +102,6 @@ export default function OfferFormPage() {
       perimeter: "",
       accessories: [],
       fillings: [],
-
       images: {
         insideView: "",
         outsideView: "",
@@ -112,43 +111,37 @@ export default function OfferFormPage() {
   const [totalDiscount, setTotalDiscount] = useState(0);
 
   // ──────────────────────────────────────────────────────────────────────────────
-  // 4a) LINE TOTAL / SUBTOTAL HELPERS (now including “fillings”)
+  // 4a) LINE TOTAL / SUBTOTAL HELPERS
   // ──────────────────────────────────────────────────────────────────────────────
   const computeLineTotalNet = (item) => {
-    // 1) Base net price: qty × unitPrice × (1 – discount%).
     const qty = parseFloat(item.quantity) || 0;
     const basePrice = parseFloat(item.unitPrice) || 0;
     const baseDisc = parseFloat(item.discount) || 0;
-    const discountedUnitPrice = basePrice * (1 - baseDisc / 100);
-    const baseNet = qty * discountedUnitPrice;
-
-    // 2) Add each filling’s own net price: (f.price × (1 – f.discountPercent/100)).
+    const netUnit = basePrice * (1 - baseDisc / 100);
+    const baseNet = qty * netUnit;
     const fillingsNet = (item.fillings || []).reduce((sum, f) => {
-      const fPrice = parseFloat(f.price) || 0;
-      const fDiscPercent = parseFloat(f.discountPercent) || 0;
-      const fNet = fPrice * (1 - fDiscPercent / 100);
-      return sum + fNet;
+      const price = parseFloat(f.price) || 0;
+      const disc = parseFloat(f.discountPercent) || 0;
+      return sum + price * (1 - disc / 100);
     }, 0);
-
     return baseNet + fillingsNet;
   };
 
   const computeLineTotalGross = (item) => {
-    // Take the net sum and apply VAT:
-    const netSum = computeLineTotalNet(item);
-    const vatRate = parseFloat(item.vat) || 0;
-    return netSum * (1 + vatRate / 100);
+    const net = computeLineTotalNet(item);
+    const rate = parseFloat(item.vat) || 0;
+    return net * (1 + rate / 100);
   };
 
   const computeSubTotal = () =>
-    items.reduce((sum, item) => {
-      return (
+    items.reduce(
+      (sum, it) =>
         sum +
         (useNetPrices
-          ? computeLineTotalNet(item)
-          : computeLineTotalGross(item))
-      );
-    }, 0);
+          ? computeLineTotalNet(it)
+          : computeLineTotalGross(it)),
+      0
+    );
 
   const computeSubTotalAfterDiscount = () => {
     const raw = computeSubTotal();
@@ -157,16 +150,11 @@ export default function OfferFormPage() {
 
   const computeTotalVAT = () => {
     if (!useNetPrices) return 0;
-    return items.reduce((sum, item) => {
-      // 1) compute this line’s net (including fillings)
-      const netLine = computeLineTotalNet(item);
-
-      // 2) apply global discount to that net
-      const netAfterGlobal = netLine * (1 - (parseFloat(totalDiscount) || 0) / 100);
-
-      // 3) compute VAT on netAfterGlobal
-      const vatRate = parseFloat(item.vat) || 0;
-      return sum + netAfterGlobal * (vatRate / 100);
+    return items.reduce((sum, it) => {
+      const netLine = computeLineTotalNet(it);
+      const afterGlobal = netLine * (1 - (parseFloat(totalDiscount) || 0) / 100);
+      const rate = parseFloat(it.vat) || 0;
+      return sum + afterGlobal * (rate / 100);
     }, 0);
   };
 
@@ -185,7 +173,6 @@ export default function OfferFormPage() {
         unitPrice: 0.0,
         vat: 19,
         discount: 0,
-
         system: "",
         colorOuter: "",
         colorInner: "",
@@ -210,11 +197,7 @@ export default function OfferFormPage() {
         perimeter: "",
         accessories: [],
         fillings: [],
-
-        images: {
-          insideView: "",
-          outsideView: "",
-        },
+        images: { insideView: "", outsideView: "" },
       },
     ]);
   };
@@ -223,88 +206,64 @@ export default function OfferFormPage() {
     setItems((prev) => prev.filter((i) => i.id !== id));
   };
 
-  /**
-   * When a field changes in a ProductRow, call handleItemChange(itemId, fieldName, newValue).
-   * If fieldName === "productId", we look up that product in catalogProducts and
-   * copy all its Firestore fields (including “fillings” & “accessories”) into this line.
-   */
   const handleItemChange = (id, field, value) => {
     setItems((prev) =>
       prev.map((i) => {
         if (i.id !== id) return i;
-
-        // 1) If user selected a “product” from the dropdown:
         if (field === "productId") {
           const chosen = catalogProducts.find((p) => p.id === value);
-          if (chosen) {
-            return {
-              ...i,
-              productId: value,
-              productName: chosen.data.productName || "",
-              unitPrice: chosen.data.unitPrice ?? 0,
-              vat: chosen.data.vat ?? 0,
-
-              // Copy all “Fenster” details from Firestore:
-              system: chosen.data.system || "",
-              colorOuter: chosen.data.colorOuter || "",
-              colorInner: chosen.data.colorInner || "",
-              frameType: chosen.data.frameType || "",
-              frameDimensions: chosen.data.frameDimensions || "",
-              frameVeneerColor: chosen.data.frameVeneerColor || "",
-              sashVeneerColor: chosen.data.sashVeneerColor || "",
-              coreSealFrame: chosen.data.coreSealFrame || "",
-              coreSealSash: chosen.data.coreSealSash || "",
-              thresholdType: chosen.data.thresholdType || "",
-              weldingType: chosen.data.weldingType || "",
-              glazing: chosen.data.glazing || "",
-              glassHold: chosen.data.glassHold || "",
-              sashType: chosen.data.sashType || "",
-              fitting: chosen.data.fitting || "",
-              fittingType: chosen.data.fittingType || "",
-              handleTypeInner: chosen.data.handleTypeInner || "",
-              handleColorInner: chosen.data.handleColorInner || "",
-              handleColorOuter: chosen.data.handleColorOuter || "",
-              UwCoefficient: chosen.data.UwCoefficient || "",
-              weightUnit: chosen.data.weightUnit || "",
-              perimeter: chosen.data.perimeter || "",
-              accessories: Array.isArray(chosen.data.accessories)
-                ? chosen.data.accessories
-                : [],
-              fillings: Array.isArray(chosen.data.fillings)
-                ? chosen.data.fillings
-                : [],
-
-              images: chosen.data.images || {
-                insideView: "",
-                outsideView: "",
-              },
-
-              // Keep the existing quantity/unit/discount if already typed:
-              quantity: i.quantity ?? 1,
-              unit: i.unit || "Stk",
-              discount: i.discount ?? 0,
-            };
-          } else {
-            // If not found in catalog → just clear productName
-            return {
-              ...i,
-              productId: "",
-              productName: "",
-            };
+          if (!chosen) {
+            return { ...i, productId: "", productName: "" };
           }
+          const d = chosen.data;
+          const name = d.productName ?? d.name ?? "";
+          const price = d.unitPrice ?? d.price ?? 0;
+          const vat = d.vat ?? 0;
+          return {
+            ...i,
+            productId: value,
+            productName: name,
+            unitPrice: price,
+            vat,
+            system: d.system || "",
+            colorOuter: d.colorOuter || d.color || "",
+            colorInner: d.colorInner || "",
+            frameType: d.frameType || "",
+            frameDimensions:
+              d.frameDimensions ||
+              `${d.width ?? ""}×${d.height ?? ""}`.trim(),
+            frameVeneerColor: d.frameVeneerColor || "",
+            sashVeneerColor: d.sashVeneerColor || "",
+            coreSealFrame: d.coreSealFrame || "",
+            coreSealSash: d.coreSealSash || "",
+            thresholdType: d.thresholdType || "",
+            weldingType: d.weldingType || "",
+            glazing: d.glazing || "",
+            glassHold: d.glassHold || "",
+            sashType: d.sashType || "",
+            fitting: d.fitting || "",
+            fittingType: d.fittingType || "",
+            handleTypeInner: d.handleTypeInner || "",
+            handleColorInner: d.handleColorInner || "",
+            handleColorOuter: d.handleColorOuter || "",
+            UwCoefficient: d.UwCoefficient || "",
+            weightUnit: d.weightUnit || "",
+            perimeter: d.perimeter || "",
+            accessories: Array.isArray(d.accessories) ? d.accessories : [],
+            fillings: Array.isArray(d.fillings) ? d.fillings : [],
+            images: d.images || { insideView: "", outsideView: "" },
+            quantity: i.quantity,
+            unit: i.unit,
+            discount: i.discount,
+          };
         }
-
-        // 2) Otherwise, update only that field:
-        return {
-          ...i,
-          [field]: value,
-        };
+        return { ...i, [field]: value };
       })
     );
   };
 
   const toggleNetGross = () => {
-    setUseNetPrices((prev) => !prev);
+    setUseNetPrices((p) => !p);
   };
 
   // ──────────────────────────────────────────────────────────────────────────────
@@ -330,154 +289,175 @@ export default function OfferFormPage() {
   // ──────────────────────────────────────────────────────────────────────────────
   // 7) FETCH COMPANY PROFILE & CATALOG PRODUCTS once user is authenticated
   // ──────────────────────────────────────────────────────────────────────────────
-  const fetchLatestProfile = async () => {
-    const user = auth.currentUser;
-    if (!user) return null;
-    try {
-      const profileRef = doc(
-        db,
-        "users",
-        user.uid,
-        "companyProfile",
-        "profile"
-      );
-      const snap = await getDoc(profileRef);
-      if (snap.exists()) {
-        const data = snap.data();
-        setCompanyProfile(data);
-        return data;
-      }
-    } catch (err) {
-      console.error("Error refreshing company profile:", err);
-    }
-    return null;
-  };
-
   useEffect(() => {
-    let unsubscribeCatalog = () => {};
-    const unsubscribeAuth = onAuthStateChanged(
-      auth,
-      async (currentUser) => {
-        if (currentUser) {
-          // 7a) Load Company Profile
-          try {
-            const profileRef = doc(
-              db,
-              "users",
-              currentUser.uid,
-              "companyProfile",
-              "profile"
-            );
-            const profileSnap = await getDoc(profileRef);
-            if (profileSnap.exists()) {
-              setCompanyProfile(profileSnap.data());
-            }
-          } catch (err) {
-            console.error("Error loading company profile:", err);
-          }
-          setProfileLoading(false);
+    let unsubUser = () => {};
+    let unsubGlobal = () => {};
 
-          // 7b) Subscribe to “catalog products”
-          try {
-            const productsColRef = collection(
-              db,
-              "users",
-              currentUser.uid,
-              "products"
-            );
-            unsubscribeCatalog = onSnapshot(
-              productsColRef,
-              (snapshot) => {
-                const arr = [];
-                snapshot.forEach((docSnap) => {
-                  arr.push({ id: docSnap.id, data: docSnap.data() });
-                });
-                setCatalogProducts(arr);
-                setCatalogLoading(false);
-              },
-              (error) => {
-                console.error("Error fetching catalog products:", error);
-                setCatalogLoading(false);
-              }
-            );
-          } catch (err) {
-            console.error("Error subscribing to catalog:", err);
+    const unsubAuth = onAuthStateChanged(auth, async (currentUser) => {
+      if (!currentUser) {
+        setProfileLoading(false);
+        setCatalogLoading(false);
+        return;
+      }
+
+      // 7a) Load Company Profile
+      try {
+        const profileRef = doc(
+          db,
+          "users",
+          currentUser.uid,
+          "companyProfile",
+          "profile"
+        );
+        const snap = await getDoc(profileRef);
+        if (snap.exists()) {
+          setCompanyProfile(snap.data());
+        }
+      } catch (err) {
+        console.error("Error loading company profile:", err);
+      }
+      setProfileLoading(false);
+
+      // 7b) Subscribe to user catalog
+      try {
+        const userRef = collection(
+          db,
+          "users",
+          currentUser.uid,
+          "products"
+        );
+        unsubUser = onSnapshot(
+          userRef,
+          (snap) => {
+            const arr = [];
+            snap.forEach((d) => arr.push({ id: d.id, data: d.data() }));
+            setUserCatalog(arr);
+            setCatalogLoading(false);
+          },
+          (err) => {
+            console.error("Error fetching user catalog:", err);
             setCatalogLoading(false);
           }
-        } else {
-          setProfileLoading(false);
-          setCatalogLoading(false);
-        }
+        );
+      } catch (err) {
+        console.error("Error subscribing to user catalog:", err);
+        setCatalogLoading(false);
       }
-    );
+
+      // 7c) Subscribe to global catalog
+      try {
+        const globalRef = collection(db, "products");
+        unsubGlobal = onSnapshot(
+          globalRef,
+          (snap) => {
+            const arr = [];
+            snap.forEach((d) => arr.push({ id: d.id, data: d.data() }));
+            setGlobalCatalog(arr);
+            setCatalogLoading(false);
+          },
+          (err) => {
+            console.error("Error fetching global catalog:", err);
+            setCatalogLoading(false);
+          }
+        );
+      } catch (err) {
+        console.error("Error subscribing to global catalog:", err);
+        setCatalogLoading(false);
+      }
+    });
 
     return () => {
-      unsubscribeAuth();
-      unsubscribeCatalog();
+      unsubAuth();
+      unsubUser();
+      unsubGlobal();
     };
   }, []);
+
+  // ──────────────────────────────────────────────────────────────────────────────
+  // 7d) Merge catalogs whenever either updates
+  // ──────────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    setCatalogProducts([...globalCatalog, ...userCatalog]);
+  }, [globalCatalog, userCatalog]);
 
   // ──────────────────────────────────────────────────────────────────────────────
   // 8) GENERATE PDF
   // ──────────────────────────────────────────────────────────────────────────────
   const generatePDF = async () => {
-    // Refresh company profile if needed
-    await fetchLatestProfile();
+    // Refresh company profile
+    const user = auth.currentUser;
+    if (user) {
+      try {
+        const profileRef = doc(
+          db,
+          "users",
+          user.uid,
+          "companyProfile",
+          "profile"
+        );
+        const snap = await getDoc(profileRef);
+        if (snap.exists()) {
+          setCompanyProfile(snap.data());
+        }
+      } catch (err) {
+        console.error("Error refreshing company profile:", err);
+      }
+    }
 
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const pageWidth = doc.internal.pageSize.getWidth();
+    const pdf = new jsPDF({ unit: "pt", format: "a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
     const margin = 40;
     let cursorY = 40;
 
     // --- (1) COMPANY HEADER ---
     if (companyProfile.logoUrl) {
-      doc.setFontSize(18).setTextColor("#000");
-      doc.text(companyProfile.name, margin, cursorY + 5);
-      doc.setFontSize(10).setTextColor("#555");
-      doc.text(
+      pdf.setFontSize(18).setTextColor("#000");
+      pdf.text(companyProfile.name, margin, cursorY + 5);
+      pdf.setFontSize(10).setTextColor("#555");
+      pdf.text(
         `${companyProfile.street}, ${companyProfile.zipCity}, ${companyProfile.country}`,
         margin,
         cursorY + 20
       );
-      doc.text(
+      pdf.text(
         `Tel: ${companyProfile.phone}  ·  E-Mail: ${companyProfile.email}`,
         margin,
         cursorY + 35
       );
-      doc.text(`Web: ${companyProfile.website}`, margin, cursorY + 50);
+      pdf.text(`Web: ${companyProfile.website}`, margin, cursorY + 50);
       if (companyProfile.vatNumber) {
-        doc.text(`VAT: ${companyProfile.vatNumber}`, margin, cursorY + 65);
+        pdf.text(`VAT: ${companyProfile.vatNumber}`, margin, cursorY + 65);
       }
       cursorY += 80;
     } else {
-      doc.setFontSize(18).setTextColor("#000");
-      doc.text(companyProfile.name || "Your Company Name", margin, cursorY);
-      doc.setFontSize(10).setTextColor("#555");
-      doc.text(
+      pdf.setFontSize(18).setTextColor("#000");
+      pdf.text(companyProfile.name || "Your Company Name", margin, cursorY);
+      pdf.setFontSize(10).setTextColor("#555");
+      pdf.text(
         `${companyProfile.street}, ${companyProfile.zipCity}, ${companyProfile.country}`,
         margin,
         cursorY + 20
       );
       if (companyProfile.phone) {
-        doc.text(`Tel: ${companyProfile.phone}`, margin, cursorY + 35);
+        pdf.text(`Tel: ${companyProfile.phone}`, margin, cursorY + 35);
       }
       if (companyProfile.email) {
-        doc.text(`E-Mail: ${companyProfile.email}`, margin, cursorY + 50);
+        pdf.text(`E-Mail: ${companyProfile.email}`, margin, cursorY + 50);
       }
       cursorY += 60;
     }
 
     // --- (2) OFFER TITLE & DATES ---
-    doc.setFontSize(16).setTextColor("#000");
-    doc.text("Angebot", margin, cursorY);
-    doc.setFontSize(12);
-    doc.text(`Offer No.: ${offerNumber}`, pageWidth - margin - 200, cursorY);
-    doc.text(
+    pdf.setFontSize(16).setTextColor("#000");
+    pdf.text("Angebot", margin, cursorY);
+    pdf.setFontSize(12);
+    pdf.text(`Offer No.: ${offerNumber}`, pageWidth - margin - 200, cursorY);
+    pdf.text(
       `Date: ${offerDate.toLocaleDateString("de-DE")}`,
       pageWidth - margin - 200,
       cursorY + 15
     );
-    doc.text(
+    pdf.text(
       `Expires: ${expirationDate.toLocaleDateString("de-DE")}`,
       pageWidth - margin - 200,
       cursorY + 30
@@ -485,21 +465,22 @@ export default function OfferFormPage() {
     cursorY += 45;
 
     // --- (3) CONTACT & ADDRESS BOX ---
-    doc.setDrawColor("#ccc")
+    pdf
+      .setDrawColor("#ccc")
       .setFillColor("#f9f9f9")
       .roundedRect(margin, cursorY, pageWidth - margin * 2, 90, 4, 4, "FD");
-    doc.setFontSize(10).setTextColor("#333");
-    doc.text(`Contact: ${contactName}`, margin + 6, cursorY + 20);
-    doc.text(`Address:`, margin + 6, cursorY + 40);
-    doc.text(`${addressLine1}`, margin + 60, cursorY + 40);
-    doc.text(`${addressLine2}`, margin + 60, cursorY + 55);
-    doc.text(`${countryAddr}`, margin + 60, cursorY + 70);
+    pdf.setFontSize(10).setTextColor("#333");
+    pdf.text(`Contact: ${contactName}`, margin + 6, cursorY + 20);
+    pdf.text(`Address:`, margin + 6, cursorY + 40);
+    pdf.text(`${addressLine1}`, margin + 60, cursorY + 40);
+    pdf.text(`${addressLine2}`, margin + 60, cursorY + 55);
+    pdf.text(`${countryAddr}`, margin + 60, cursorY + 70);
     cursorY += 110;
 
     // --- (4) REGARDING & REFERENCE ---
-    doc.setFontSize(11).setTextColor("#000");
-    doc.text(`Regarding: ${regarding}`, margin, cursorY);
-    doc.text(
+    pdf.setFontSize(11).setTextColor("#000");
+    pdf.text(`Regarding: ${regarding}`, margin, cursorY);
+    pdf.text(
       `Reference / Order No.: ${referenceOrder}`,
       margin,
       cursorY + 15
@@ -507,12 +488,12 @@ export default function OfferFormPage() {
     cursorY += 30;
 
     // --- (5) HEADER TEXT ---
-    doc.setFontSize(10).setTextColor("#333");
-    const headerLines = doc.splitTextToSize(
+    pdf.setFontSize(10).setTextColor("#333");
+    const headerLines = pdf.splitTextToSize(
       headerText,
       pageWidth - margin * 2
     );
-    doc.text(headerLines, margin, cursorY);
+    pdf.text(headerLines, margin, cursorY);
     cursorY += headerLines.length * 12 + 10;
 
     // --- (6) PRODUCTS TABLE (Basic columns) ---
@@ -535,11 +516,8 @@ export default function OfferFormPage() {
     ];
     const tableRows = items.map((item, idx) => {
       const qtyString = (item.quantity ?? 0).toString();
-      // Price column shows raw net (quantity×discounted + fillings)
       const rawLineNet = computeLineTotalNet(item);
       const priceString = rawLineNet.toFixed(2) + " €";
-
-      // Then compute the “after global discount” line total:
       const rawLineGross = computeLineTotalGross(item);
       const lineAfterGlobalDisc = useNetPrices
         ? rawLineNet * (1 - (parseFloat(totalDiscount) || 0) / 100)
@@ -557,7 +535,7 @@ export default function OfferFormPage() {
       ];
     });
 
-    autoTable(doc, {
+    autoTable(pdf, {
       head: [tableColumnHeaders],
       body: tableRows,
       startY: cursorY,
@@ -578,13 +556,13 @@ export default function OfferFormPage() {
       },
       willDrawCell: (data) => {
         if (data.row.index === tableRows.length - 1) {
-          const pCount = doc.internal.getNumberOfPages();
-          for (let i = 1; i <= pCount; i++) {
-            doc.setPage(i).setFontSize(9);
-            doc.text(
-              `Page ${i} / ${pCount}`,
+          const pageCount = pdf.internal.getNumberOfPages();
+          for (let i = 1; i <= pageCount; i++) {
+            pdf.setPage(i).setFontSize(9);
+            pdf.text(
+              `Page ${i} / ${pageCount}`,
               pageWidth / 2,
-              doc.internal.pageSize.getHeight() - 20,
+              pdf.internal.pageSize.getHeight() - 20,
               { align: "center" }
             );
           }
@@ -599,44 +577,39 @@ export default function OfferFormPage() {
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
 
-      // (7a) Heading bar: “Fenster 00X | Menge: … | System: … | Farbe: …”
-      doc.setDrawColor("#4169E1").setFillColor("#E6E6FA");
-      const boxHeight = 20;
-      doc.rect(margin, cursorY, pageWidth - 2 * margin, boxHeight, "FD");
-      doc.setFontSize(10).setTextColor("#000");
-
-      const totalBoxWidth = pageWidth - 2 * margin;
-      const segmentWidth = totalBoxWidth / 4;
-
-      doc.text(`Fenster 00${idx + 1}`, margin + 4, cursorY + 13);
-      doc.text(
-        `Menge: ${item.quantity ?? 0}`,
-        margin + segmentWidth + 4,
+      // 7a) Heading bar
+      pdf.setDrawColor("#4169E1").setFillColor("#E6E6FA");
+      const boxH = 20;
+      pdf.rect(margin, cursorY, pageWidth - 2 * margin, boxH, "FD");
+      pdf.setFontSize(10).setTextColor("#000");
+      const segW = (pageWidth - 2 * margin) / 4;
+      pdf.text(`Fenster 00${idx + 1}`, margin + 4, cursorY + 13);
+      pdf.text(
+        `Menge: ${item.quantity}`,
+        margin + segW + 4,
         cursorY + 13
       );
-      doc.text(
+      pdf.text(
         `System: ${item.system}`,
-        margin + segmentWidth * 2 + 4,
+        margin + segW * 2 + 4,
         cursorY + 13
       );
-      doc.text(
+      pdf.text(
         `Farbe: ${item.colorOuter}`,
-        margin + segmentWidth * 3 + 4,
+        margin + segW * 3 + 4,
         cursorY + 13
       );
-      cursorY += boxHeight + 8;
+      cursorY += boxH + 8;
 
-      // (7b) Images, if present
+      // 7b) Images
       if (item.images.insideView) {
         try {
-          doc.addImage(item.images.insideView, "JPEG", margin, cursorY, 200, 120);
-        } catch (e) {
-          console.warn("Failed to add inside view image", e);
-        }
+          pdf.addImage(item.images.insideView, "JPEG", margin, cursorY, 200, 120);
+        } catch {}
       }
       if (item.images.outsideView) {
         try {
-          doc.addImage(
+          pdf.addImage(
             item.images.outsideView,
             "JPEG",
             pageWidth - margin - 200,
@@ -644,15 +617,13 @@ export default function OfferFormPage() {
             200,
             120
           );
-        } catch (e) {
-          console.warn("Failed to add outside view image", e);
-        }
+        } catch {}
       }
       if (item.images.insideView || item.images.outsideView) {
         cursorY += 120 + 8;
       }
 
-      // (7c) “Rahmen” details table (two columns)
+      // 7c) Frame details
       const frameRows = [
         ["Rahmen", item.frameType],
         ["Außen Farbe", item.colorOuter],
@@ -667,102 +638,73 @@ export default function OfferFormPage() {
         ["Glazing required", item.glazing],
         ["Glasleiste", item.glassHold],
         ["Flügel", item.sashType],
-        ["Glasleiste", item.glassHold],
         ["Beschlag", item.fitting],
         ["  Beschlagsart", item.fittingType],
-        ["  Art der Olive (innen)", item.handleTypeInner],
+        ["  Olive (innen)", item.handleTypeInner],
         ["  Drückerfarbe innen", item.handleColorInner],
-        ["  Farbe des Außengriffs", item.handleColorOuter],
+        ["  Grifffarbe außen", item.handleColorOuter],
         ["Wärmekoeffizient", item.UwCoefficient],
         ["Gewichtseinheit", item.weightUnit],
         ["Umrandung", item.perimeter],
       ];
 
-      autoTable(doc, {
+      autoTable(pdf, {
         startY: cursorY,
         margin: { left: margin, right: margin },
         theme: "grid",
         head: [["", ""]],
         body: frameRows,
         showHead: false,
-        styles: {
-          fontSize: 9,
-          cellPadding: 4,
-          textColor: "#333",
-        },
-        columnStyles: {
-          0: { cellWidth: 150, fontStyle: "bold" },
-          1: { cellWidth: 250 },
-        },
+        styles: { fontSize: 9, cellPadding: 4, textColor: "#333" },
+        columnStyles: { 0: { cellWidth: 150, fontStyle: "bold" }, 1: { cellWidth: 250 } },
         tableLineColor: "#4169E1",
         tableLineWidth: 0.5,
       });
-      cursorY = doc.lastAutoTable.finalY + 10;
+      cursorY = pdf.lastAutoTable.finalY + 10;
 
-      // (7d) Accessories table, if any
-      if (Array.isArray(item.accessories) && item.accessories.length > 0) {
-        const accRows = item.accessories.map((acc) => [
-          acc.description || acc.code,
-          (acc.qty ?? 0).toString(),
+      // 7d) Accessories
+      if (item.accessories.length) {
+        const accRows = item.accessories.map((a) => [
+          a.description || a.code,
+          (a.qty || 0).toString(),
         ]);
-        autoTable(doc, {
+        autoTable(pdf, {
           startY: cursorY,
           margin: { left: margin, right: margin },
           head: [["Zubehör", "Menge"]],
           body: accRows,
-          headStyles: {
-            fillColor: "#F0F8FF",
-            textColor: "#333",
-            fontSize: 9,
-          },
+          headStyles: { fillColor: "#F0F8FF", textColor: "#333", fontSize: 9 },
           bodyStyles: { fontSize: 9, textColor: "#333" },
           theme: "striped",
           styles: { cellPadding: 4 },
-          columnStyles: {
-            0: { cellWidth: 350 },
-            1: { cellWidth: 60, halign: "right" },
-          },
+          columnStyles: { 0: { cellWidth: 350 }, 1: { cellWidth: 60, halign: "right" } },
         });
-        cursorY = doc.lastAutoTable.finalY + 10;
+        cursorY = pdf.lastAutoTable.finalY + 10;
       }
 
-      // (7e) Fillings table, if any
-      if (Array.isArray(item.fillings) && item.fillings.length > 0) {
+      // 7e) Fillings
+      if (item.fillings.length) {
         const fillRows = item.fillings.map((f) => {
-          const fNetPrice = parseFloat(f.price) || 0;
-          const fDiscPct = parseFloat(f.discountPercent) || 0;
-          const fDiscValue = fNetPrice * (fDiscPct / 100);
-          const fTotal = fNetPrice - fDiscValue;
+          const price = parseFloat(f.price) || 0;
+          const discPct = parseFloat(f.discountPercent) || 0;
+          const discVal = price * (discPct / 100);
+          const total = price - discVal;
           return [
             f.id,
             f.spec,
             f.dimensions,
-            fNetPrice.toFixed(2) + " €",
-            fDiscPct + "%",
-            fDiscValue.toFixed(2) + " €",
-            fTotal.toFixed(2) + " €",
+            price.toFixed(2) + " €",
+            discPct + "%",
+            discVal.toFixed(2) + " €",
+            total.toFixed(2) + " €",
           ];
         });
-        autoTable(doc, {
+        autoTable(pdf, {
           startY: cursorY,
           margin: { left: margin, right: margin },
-          head: [
-            [
-              "ID",
-              "Füllung",
-              "Maße",
-              "Netto Preis",
-              "Disc %",
-              "Rabatt",
-              "Summe",
-            ],
-          ],
+          head: [["ID", "Füllung", "Maße", "Netto Preis", "Disc %", "Rabatt", "Summe"]],
           body: fillRows,
-          headStyles: {
-            fillColor: "#E6E6FA",
-            textColor: "#333",
-            fontSize: 8,
-          },
+          headStyles: { fillColor: "#E6E6FA", textColor: "#333", fontSize: 8 },
           bodyStyles: { fontSize: 8, textColor: "#333" },
           theme: "grid",
           styles: { cellPadding: 3 },
@@ -776,104 +718,97 @@ export default function OfferFormPage() {
             6: { cellWidth: 60, halign: "right" },
           },
         });
-        cursorY = doc.lastAutoTable.finalY + 10;
+        cursorY = pdf.lastAutoTable.finalY + 10;
       }
 
-      // (7f) Fenster total line (net + VAT):
-      const singleNet = computeLineTotalNet(item);
-      // Note: item.discount has already been applied into computeLineTotalNet (base + fillings),
-      // because computeLineTotalNet’s “baseNet” calculation did “unitPrice × (1 – discount/100)”.
-      // So “singleNet” is after the *item‐level discount*. We now only need to apply “global discount”:
-      const singleAfterGlobalDisc =
-        singleNet * (1 - (parseFloat(totalDiscount) || 0) / 100);
-      const singleVAT = useNetPrices
-        ? singleAfterGlobalDisc * ((parseFloat(item.vat) || 0) / 100)
+      // 7f) Fenster total
+      const net = computeLineTotalNet(item);
+      const afterGlobal = net * (1 - (parseFloat(totalDiscount) || 0) / 100);
+      const vatAmt = useNetPrices
+        ? afterGlobal * ((parseFloat(item.vat) || 0) / 100)
         : 0;
-      const singleGrand = useNetPrices
-        ? singleAfterGlobalDisc + singleVAT
-        : singleAfterGlobalDisc;
+      const grand = useNetPrices ? afterGlobal + vatAmt : afterGlobal;
 
-      doc.setFontSize(10).setFont(undefined, "bold");
-      doc.text(
-        `Fenster total: ${singleAfterGlobalDisc.toFixed(2)} €  +USt ${singleVAT.toFixed(
+      pdf.setFontSize(10).setFont(undefined, "bold");
+      pdf.text(
+        `Fenster total: ${afterGlobal.toFixed(2)} €  +USt ${vatAmt.toFixed(
           2
-        )} €  = ${singleGrand.toFixed(2)} €`,
+        )} €  = ${grand.toFixed(2)} €`,
         margin,
         cursorY
       );
-      doc.setFont(undefined, "normal");
+      pdf.setFont(undefined, "normal");
       cursorY += 20;
 
-      // If we’re near the bottom, add a new page:
-      if (cursorY > doc.internal.pageSize.getHeight() - 80) {
-        doc.addPage();
+      if (cursorY > pdf.internal.pageSize.getHeight() - 80) {
+        pdf.addPage();
         cursorY = margin;
       }
     }
 
-    // --- (8) OVERALL TOTALS (After all Fenster blocks) ---
-    doc.setFontSize(10).setTextColor("#000");
-    const totalsX = pageWidth - margin - 200;
-    let totalsY = cursorY + 20;
+    // --- (8) OVERALL TOTALS ---
+    pdf.setFontSize(10).setTextColor("#000");
+    const tx = pageWidth - margin - 200;
+    let ty = cursorY + 20;
 
-    doc.text(`Subtotal (before discount): ${rawSubtotal.toFixed(2)} €`, totalsX, totalsY);
-    totalsY += 15;
+    pdf.text(`Subtotal (before discount): ${rawSubtotal.toFixed(2)} €`, tx, ty);
+    ty += 15;
 
     if (parseFloat(totalDiscount) > 0) {
-      doc.text(
+      pdf.text(
         `Global Discount (${totalDiscount}%): -${(
           rawSubtotal * (totalDiscount / 100)
         ).toFixed(2)} €`,
-        totalsX,
-        totalsY
+        tx,
+        ty
       );
-      totalsY += 15;
+      ty += 15;
     }
 
-    doc.text(`Subtotal (after discount): ${subAfterDisc.toFixed(2)} €`, totalsX, totalsY);
-    totalsY += 15;
+    pdf.text(`Subtotal (after discount): ${subAfterDisc.toFixed(2)} €`, tx, ty);
+    ty += 15;
 
     if (useNetPrices) {
-      doc.text(`VAT Total: ${totalVAT.toFixed(2)} €`, totalsX, totalsY);
-      totalsY += 15;
+      pdf.text(`VAT Total: ${totalVAT.toFixed(2)} €`, tx, ty);
+      ty += 15;
     }
 
-    doc.setFontSize(12).setFont(undefined, "bold");
-    doc.text(`Total: ${grandTotal.toFixed(2)} €`, totalsX, totalsY);
-    doc.setFont(undefined, "normal");
-    cursorY = totalsY + 40;
+    pdf.setFontSize(12).setFont(undefined, "bold");
+    pdf.text(`Total: ${grandTotal.toFixed(2)} €`, tx, ty);
+    pdf.setFont(undefined, "normal");
+    cursorY = ty + 40;
 
     // --- (9) FOOTER TEXT ---
-    doc.setFontSize(10).setTextColor("#333");
-    const footerLines = doc.splitTextToSize(
+    pdf.setFontSize(10).setTextColor("#333");
+    const footerLines = pdf.splitTextToSize(
       footerText,
       pageWidth - margin * 2
     );
-    doc.text(footerLines, margin, cursorY);
+    pdf.text(footerLines, margin, cursorY);
     cursorY += footerLines.length * 12 + 20;
 
     // --- (10) MORE OPTIONS SUMMARY ---
-    doc.setFontSize(9).setTextColor("#555");
-    doc.text("----- More Options -----", margin, cursorY);
+    pdf.setFontSize(9).setTextColor("#555");
+    pdf.text("----- More Options -----", margin, cursorY);
     cursorY += 12;
-    doc.text(`Currency: ${currency}`, margin, cursorY);
+    pdf.text(`Currency: ${currency}`, margin, cursorY);
     cursorY += 12;
-    doc.text(`Internal Contact: ${internalContact}`, margin, cursorY);
+    pdf.text(`Internal Contact: ${internalContact}`, margin, cursorY);
     cursorY += 12;
-    doc.text(`Delivery Conditions: ${deliveryConditions}`, margin, cursorY);
+    pdf.text(`Delivery Conditions: ${deliveryConditions}`, margin, cursorY);
     cursorY += 12;
-    doc.text(`Payment Terms: ${paymentTerms}`, margin, cursorY);
+    pdf.text(`Payment Terms: ${paymentTerms}`, margin, cursorY);
     cursorY += 12;
-    doc.text(`VAT Regulation: ${vatRegulation}`, margin, cursorY);
+    pdf.text(`VAT Regulation: ${vatRegulation}`, margin, cursorY);
     cursorY += 12;
     let vatLine = "";
     if (salesSubjectToVAT) vatLine = "Sales subject to VAT";
     if (taxFree) vatLine = "Tax-free sales (§4 UStG)";
     if (reverseCharge) vatLine = "Reverse charge (§13b UStG)";
-    doc.text(`VAT Option: ${vatLine}`, margin, cursorY);
+    pdf.text(`VAT Option: ${vatLine}`, margin, cursorY);
 
     // --- (11) SAVE PDF ---
-    doc.save(`Angebot-${offerNumber || "new"}.pdf`);
+    pdf.save(`Angebot-${offerNumber || "new"}.pdf`);
   };
 
   // ──────────────────────────────────────────────────────────────────────────────
@@ -953,9 +888,7 @@ export default function OfferFormPage() {
         {/* SECTION 1: CONTACT & OFFER INFORMATION */}
         {/* ──────────────────────────────────────────────────────────── */}
         <section className="section contact-offer-info">
-          <div className="section-header">
-            CONTACT AND OFFER INFORMATION
-          </div>
+          <div className="section-header">CONTACT AND OFFER INFORMATION</div>
           <div className="two-columns">
             {/* Left Column */}
             <div className="column left-col">
@@ -1046,7 +979,9 @@ export default function OfferFormPage() {
                   />
                 </div>
                 <div className="field-group">
-                  <label className="label">Reference / Order number</label>
+                  <label className="label">
+                    Reference / Order number
+                  </label>
                   <input
                     type="text"
                     className="input full-width"
@@ -1100,7 +1035,7 @@ export default function OfferFormPage() {
             </button>
           </div>
 
-          {/* Table Header (Basic columns) */}
+          {/* Table Header */}
           <div className="products-table-header">
             <div className="col col-index">#</div>
             <div className="col col-product">Product or service</div>
@@ -1131,7 +1066,7 @@ export default function OfferFormPage() {
             />
           ))}
 
-          {/* Footer Links for Adding more lines, Reset Discount */}
+          {/* Footer Links */}
           <div className="products-footer-links">
             <button
               type="button"
@@ -1149,7 +1084,7 @@ export default function OfferFormPage() {
             </button>
           </div>
 
-          {/* Global Discount Input */}
+          {/* Global Discount */}
           <div className="global-discount">
             <label className="label small-label">
               Total Discount (%):
@@ -1165,7 +1100,7 @@ export default function OfferFormPage() {
             />
           </div>
 
-          {/* Totals Area */}
+          {/* Totals */}
           <div className="totals-area">
             <div className="totals-row">
               <div className="totals-label">
@@ -1230,9 +1165,7 @@ export default function OfferFormPage() {
               className="toggle-more"
               onClick={() => setShowMoreOptions((p) => !p)}
             >
-              {showMoreOptions
-                ? "Hide more options"
-                : "Show more options"}
+              {showMoreOptions ? "Hide more options" : "Show more options"}
             </button>
           </div>
 
@@ -1260,9 +1193,7 @@ export default function OfferFormPage() {
                     className="input full-width"
                     placeholder="z. B. Rivaldo Dini"
                     value={internalContact}
-                    onChange={(e) =>
-                      setInternalContact(e.target.value)
-                    }
+                    onChange={(e) => setInternalContact(e.target.value)}
                   />
                 </div>
               </div>
@@ -1274,9 +1205,7 @@ export default function OfferFormPage() {
                     type="text"
                     className="input full-width"
                     value={deliveryConditions}
-                    onChange={(e) =>
-                      setDeliveryConditions(e.target.value)
-                    }
+                    onChange={(e) => setDeliveryConditions(e.target.value)}
                   />
                 </div>
                 <div className="column">
@@ -1285,9 +1214,7 @@ export default function OfferFormPage() {
                     type="text"
                     className="input full-width"
                     value={paymentTerms}
-                    onChange={(e) =>
-                      setPaymentTerms(e.target.value)
-                    }
+                    onChange={(e) => setPaymentTerms(e.target.value)}
                   />
                 </div>
               </div>

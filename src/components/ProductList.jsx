@@ -1,6 +1,7 @@
 // src/components/ProductList.jsx
-import React from "react";
+import React, { useState, useEffect } from "react";
 import "../assets/styles/components/_productList.scss";
+import { listCatalog } from "../services/catalogService";
 
 const ProductList = ({
   items,
@@ -11,8 +12,16 @@ const ProductList = ({
   removeAccessory,
   updateFilling,
   removeFilling,
-  updateImageField,    // NEW: to handle file→base64
+  updateImageField, // to handle file→base64
 }) => {
+  // ── NEW: load global catalog ──
+  const [catalog, setCatalog] = useState([]);
+  useEffect(() => {
+    listCatalog()
+      .then(setCatalog)
+      .catch((err) => console.error("Error loading catalog:", err));
+  }, []);
+
   // Helper to convert a File object to a base64 dataURL
   const fileToBase64 = (file, callback) => {
     const reader = new FileReader();
@@ -35,7 +44,23 @@ const ProductList = ({
         <div className="item-card" key={item.id}>
           <div className="item-header">
             <h3>
-              Item {idx + 1}:{" "}
+              Item {idx + 1}:
+              {/* ── NEW: Catalog dropdown ── */}
+              <select
+                className="catalog-select"
+                value={item.productId || ""}
+                onChange={(e) =>
+                  updateItemField(idx, "productId", e.target.value)
+                }
+              >
+                <option value="">— choose product —</option>
+                {catalog.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.width}×{p.height}, {p.color})
+                  </option>
+                ))}
+              </select>
+              {/* ── end dropdown ── */}
               <input
                 type="text"
                 placeholder="e.g. Window 001"

@@ -1,0 +1,14 @@
+.admin-page {
+  padding: 2rem;
+  .add-form {
+    margin-bottom: 1rem;
+    input { margin-right: 0.5rem; }
+  }
+  .admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    th, td { padding: 0.5rem; border: 1px solid #ddd; }
+    input { width: 100%; box-sizing: border-box; }
+    button { background: none; border: none; color: red; cursor: pointer; }
+  }
+}
