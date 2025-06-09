@@ -1,16 +1,10 @@
-// src/pages/OfferFormPage.jsx
 import React, { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { auth, db } from "../services/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import {
-  doc,
-  getDoc,
-  collection,
-  onSnapshot,
-} from "firebase/firestore";
+import { doc, getDoc, collection, onSnapshot } from "firebase/firestore";
 
 import ProductRow from "../components/ProductRow";
 import NavBar from "../components/NavBar";
@@ -19,9 +13,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import "../assets/styles/pages/_offerFormPage.scss";
 
 export default function OfferFormPage() {
-  // ──────────────────────────────────────────────────────────────────────────────
-  // 1) COMPANY PROFILE STATE (fetched from Firestore)
-  // ──────────────────────────────────────────────────────────────────────────────
+  // 1) COMPANY PROFILE STATE
   const [companyProfile, setCompanyProfile] = useState({
     name: "",
     logoUrl: "",
@@ -35,22 +27,17 @@ export default function OfferFormPage() {
   });
   const [profileLoading, setProfileLoading] = useState(true);
 
-  // ──────────────────────────────────────────────────────────────────────────────
-  // 2) CATALOG PRODUCTS: user‐specific + global
-  // ──────────────────────────────────────────────────────────────────────────────
+  // 2) CATALOG PRODUCTS
   const [userCatalog, setUserCatalog] = useState([]);
   const [globalCatalog, setGlobalCatalog] = useState([]);
   const [catalogProducts, setCatalogProducts] = useState([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
 
-  // ──────────────────────────────────────────────────────────────────────────────
   // 3) CONTACT / OFFER STATE
-  // ──────────────────────────────────────────────────────────────────────────────
   const [contactName, setContactName] = useState("");
   const [addressLine1, setAddressLine1] = useState("");
   const [addressLine2, setAddressLine2] = useState("");
   const [countryAddr, setCountryAddr] = useState("Deutschland");
-
   const [regarding, setRegarding] = useState("");
   const [offerNumber, setOfferNumber] = useState("");
   const [offerDate, setOfferDate] = useState(new Date());
@@ -58,14 +45,11 @@ export default function OfferFormPage() {
     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
   );
   const [referenceOrder, setReferenceOrder] = useState("");
-
   const [headerText, setHeaderText] = useState(
     "Sehr geehrte Damen und Herren,\n\nvielen Dank für Ihre Anfrage. Gerne unterbreiten wir Ihnen das gewünschte freibleibende Angebot:"
   );
 
-  // ──────────────────────────────────────────────────────────────────────────────
   // 4) PRODUCTS SECTION STATE
-  // ──────────────────────────────────────────────────────────────────────────────
   const [useNetPrices, setUseNetPrices] = useState(true);
   const [items, setItems] = useState([
     {
@@ -77,7 +61,6 @@ export default function OfferFormPage() {
       unitPrice: 0.0,
       vat: 19,
       discount: 0,
-      // All “Fenster” fields:
       system: "",
       colorOuter: "",
       colorInner: "",
@@ -102,17 +85,15 @@ export default function OfferFormPage() {
       perimeter: "",
       accessories: [],
       fillings: [],
-      images: {
-        insideView: "",
-        outsideView: "",
-      },
+      images: { insideView: "", outsideView: "" },
+      windowSvgUrl: "",                // ← new
+      widthMm: 0,                      // so we can scale in PDF
+      heightMm: 0,
     },
   ]);
   const [totalDiscount, setTotalDiscount] = useState(0);
 
-  // ──────────────────────────────────────────────────────────────────────────────
   // 4a) LINE TOTAL / SUBTOTAL HELPERS
-  // ──────────────────────────────────────────────────────────────────────────────
   const computeLineTotalNet = (item) => {
     const qty = parseFloat(item.quantity) || 0;
     const basePrice = parseFloat(item.unitPrice) || 0;
@@ -158,10 +139,8 @@ export default function OfferFormPage() {
     }, 0);
   };
 
-  // ──────────────────────────────────────────────────────────────────────────────
   // 4b) ADD / REMOVE / CHANGE ITEM
-  // ──────────────────────────────────────────────────────────────────────────────
-  const handleAddItem = () => {
+  const handleAddItem = () =>
     setItems((prev) => [
       ...prev,
       {
@@ -198,84 +177,74 @@ export default function OfferFormPage() {
         accessories: [],
         fillings: [],
         images: { insideView: "", outsideView: "" },
+        windowSvgUrl: "",
+        widthMm: 0,
+        heightMm: 0,
       },
     ]);
-  };
 
-  const handleRemoveItem = (id) => {
+  const handleRemoveItem = (id) =>
     setItems((prev) => prev.filter((i) => i.id !== id));
-  };
 
-  const handleItemChange = (id, field, value) => {
+  const handleItemChange = (id, field, value) =>
     setItems((prev) =>
       prev.map((i) => {
         if (i.id !== id) return i;
         if (field === "productId") {
           const chosen = catalogProducts.find((p) => p.id === value);
-          if (!chosen) {
-            return { ...i, productId: "", productName: "" };
-          }
+          if (!chosen) return { ...i, productId: "", productName: "" };
           const d = chosen.data;
-          const name = d.productName ?? d.name ?? "";
-          const price = d.unitPrice ?? d.price ?? 0;
-          const vat = d.vat ?? 0;
           return {
             ...i,
             productId: value,
-            productName: name,
-            unitPrice: price,
-            vat,
-            system: d.system || "",
-            colorOuter: d.colorOuter || d.color || "",
-            colorInner: d.colorInner || "",
-            frameType: d.frameType || "",
-            frameDimensions:
-              d.frameDimensions ||
-              `${d.width ?? ""}×${d.height ?? ""}`.trim(),
+            productName: d.productName || d.name || "",
+            unitPrice: d.unitPrice  ?? 0,
+            vat:       d.vat        ?? 0,
+            system:   d.system     || "",
+            colorOuter:       d.colorOuter       || d.color || "",
+            colorInner:       d.colorInner       || "",
+            frameType:        d.frameType        || "",
+            frameDimensions:  d.dimensions       || `${d.width || ""}×${d.height || ""}`.trim(),
             frameVeneerColor: d.frameVeneerColor || "",
-            sashVeneerColor: d.sashVeneerColor || "",
-            coreSealFrame: d.coreSealFrame || "",
-            coreSealSash: d.coreSealSash || "",
-            thresholdType: d.thresholdType || "",
-            weldingType: d.weldingType || "",
-            glazing: d.glazing || "",
-            glassHold: d.glassHold || "",
-            sashType: d.sashType || "",
-            fitting: d.fitting || "",
-            fittingType: d.fittingType || "",
-            handleTypeInner: d.handleTypeInner || "",
+            sashVeneerColor:  d.sashVeneerColor  || "",
+            coreSealFrame:    d.coreSealFrame    || "",
+            coreSealSash:     d.coreSealSash     || "",
+            thresholdType:    d.thresholdType    || "",
+            weldingType:      d.weldingType      || "",
+            glazing:          d.glazing          || "",
+            glassHold:        d.glassHold        || "",
+            sashType:         d.sashType         || "",
+            fitting:          d.fitting          || "",
+            fittingType:      d.fittingType      || "",
+            handleTypeInner:  d.handleTypeInner  || "",
             handleColorInner: d.handleColorInner || "",
             handleColorOuter: d.handleColorOuter || "",
-            UwCoefficient: d.UwCoefficient || "",
-            weightUnit: d.weightUnit || "",
-            perimeter: d.perimeter || "",
-            accessories: Array.isArray(d.accessories) ? d.accessories : [],
-            fillings: Array.isArray(d.fillings) ? d.fillings : [],
-            images: d.images || { insideView: "", outsideView: "" },
+            UwCoefficient:    d.UwCoefficient    || "",
+            weightUnit:       d.weightUnit       || "",
+            perimeter:        d.perimeter        || "",
+            accessories:      Array.isArray(d.accessories) ? d.accessories : [],
+            fillings:         Array.isArray(d.fillings) ? d.fillings : [],
+            images:           d.images || { insideView: "", outsideView: "" },
+            windowSvgUrl:     d.windowSvgUrl || "",
+            widthMm:          d.widthMm   || 0,
+            heightMm:         d.heightMm  || 0,
             quantity: i.quantity,
-            unit: i.unit,
+            unit:     i.unit,
             discount: i.discount,
           };
         }
         return { ...i, [field]: value };
       })
     );
-  };
 
-  const toggleNetGross = () => {
-    setUseNetPrices((p) => !p);
-  };
+  const toggleNetGross = () => setUseNetPrices((p) => !p);
 
-  // ──────────────────────────────────────────────────────────────────────────────
   // 5) FOOTER TEXT
-  // ──────────────────────────────────────────────────────────────────────────────
   const [footerText, setFooterText] = useState(
     "Für Rückfragen stehen wir Ihnen jederzeit gerne zur Verfügung.\nWir bedanken uns sehr für Ihr Vertrauen.\n\nMit freundlichen Grüßen\n[%KONTAKTPERSON%]"
   );
 
-  // ──────────────────────────────────────────────────────────────────────────────
   // 6) MORE OPTIONS STATE
-  // ──────────────────────────────────────────────────────────────────────────────
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [currency, setCurrency] = useState("EUR");
   const [internalContact, setInternalContact] = useState("");
@@ -286,13 +255,10 @@ export default function OfferFormPage() {
   const [taxFree, setTaxFree] = useState(false);
   const [reverseCharge, setReverseCharge] = useState(false);
 
-  // ──────────────────────────────────────────────────────────────────────────────
-  // 7) FETCH COMPANY PROFILE & CATALOG PRODUCTS once user is authenticated
-  // ──────────────────────────────────────────────────────────────────────────────
+  // 7) FETCH COMPANY PROFILE & CATALOG PRODUCTS
   useEffect(() => {
     let unsubUser = () => {};
     let unsubGlobal = () => {};
-
     const unsubAuth = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         setProfileLoading(false);
@@ -310,9 +276,7 @@ export default function OfferFormPage() {
           "profile"
         );
         const snap = await getDoc(profileRef);
-        if (snap.exists()) {
-          setCompanyProfile(snap.data());
-        }
+        if (snap.exists()) setCompanyProfile(snap.data());
       } catch (err) {
         console.error("Error loading company profile:", err);
       }
@@ -373,16 +337,12 @@ export default function OfferFormPage() {
     };
   }, []);
 
-  // ──────────────────────────────────────────────────────────────────────────────
-  // 7d) Merge catalogs whenever either updates
-  // ──────────────────────────────────────────────────────────────────────────────
+  // 7d) Merge catalogs
   useEffect(() => {
     setCatalogProducts([...globalCatalog, ...userCatalog]);
   }, [globalCatalog, userCatalog]);
 
-  // ──────────────────────────────────────────────────────────────────────────────
   // 8) GENERATE PDF
-  // ──────────────────────────────────────────────────────────────────────────────
   const generatePDF = async () => {
     // Refresh company profile
     const user = auth.currentUser;
@@ -396,9 +356,7 @@ export default function OfferFormPage() {
           "profile"
         );
         const snap = await getDoc(profileRef);
-        if (snap.exists()) {
-          setCompanyProfile(snap.data());
-        }
+        if (snap.exists()) setCompanyProfile(snap.data());
       } catch (err) {
         console.error("Error refreshing company profile:", err);
       }
@@ -409,7 +367,7 @@ export default function OfferFormPage() {
     const margin = 40;
     let cursorY = 40;
 
-    // --- (1) COMPANY HEADER ---
+    // (1) COMPANY HEADER
     if (companyProfile.logoUrl) {
       pdf.setFontSize(18).setTextColor("#000");
       pdf.text(companyProfile.name, margin, cursorY + 5);
@@ -420,7 +378,7 @@ export default function OfferFormPage() {
         cursorY + 20
       );
       pdf.text(
-        `Tel: ${companyProfile.phone}  ·  E-Mail: ${companyProfile.email}`,
+        `Tel: ${companyProfile.phone} · E-Mail: ${companyProfile.email}`,
         margin,
         cursorY + 35
       );
@@ -447,7 +405,7 @@ export default function OfferFormPage() {
       cursorY += 60;
     }
 
-    // --- (2) OFFER TITLE & DATES ---
+    // (2) OFFER TITLE & DATES
     pdf.setFontSize(16).setTextColor("#000");
     pdf.text("Angebot", margin, cursorY);
     pdf.setFontSize(12);
@@ -464,7 +422,7 @@ export default function OfferFormPage() {
     );
     cursorY += 45;
 
-    // --- (3) CONTACT & ADDRESS BOX ---
+    // (3) CONTACT & ADDRESS BOX
     pdf
       .setDrawColor("#ccc")
       .setFillColor("#f9f9f9")
@@ -477,17 +435,13 @@ export default function OfferFormPage() {
     pdf.text(`${countryAddr}`, margin + 60, cursorY + 70);
     cursorY += 110;
 
-    // --- (4) REGARDING & REFERENCE ---
+    // (4) REGARDING & REFERENCE
     pdf.setFontSize(11).setTextColor("#000");
     pdf.text(`Regarding: ${regarding}`, margin, cursorY);
-    pdf.text(
-      `Reference / Order No.: ${referenceOrder}`,
-      margin,
-      cursorY + 15
-    );
+    pdf.text(`Reference / Order No.: ${referenceOrder}`, margin, cursorY + 15);
     cursorY += 30;
 
-    // --- (5) HEADER TEXT ---
+    // (5) HEADER TEXT
     pdf.setFontSize(10).setTextColor("#333");
     const headerLines = pdf.splitTextToSize(
       headerText,
@@ -496,7 +450,7 @@ export default function OfferFormPage() {
     pdf.text(headerLines, margin, cursorY);
     cursorY += headerLines.length * 12 + 10;
 
-    // --- (6) PRODUCTS TABLE (Basic columns) ---
+    // (6) PRODUCTS TABLE
     const rawSubtotal = computeSubTotal();
     const subAfterDisc = computeSubTotalAfterDiscount();
     const totalVAT = computeTotalVAT();
@@ -573,7 +527,7 @@ export default function OfferFormPage() {
       },
     });
 
-    // --- (7) DETAILED “FENSTER” BLOCKS (one per item) ---
+    // (7) DETAILED “FENSTER” BLOCKS
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx];
 
@@ -584,27 +538,43 @@ export default function OfferFormPage() {
       pdf.setFontSize(10).setTextColor("#000");
       const segW = (pageWidth - 2 * margin) / 4;
       pdf.text(`Fenster 00${idx + 1}`, margin + 4, cursorY + 13);
-      pdf.text(
-        `Menge: ${item.quantity}`,
-        margin + segW + 4,
-        cursorY + 13
-      );
-      pdf.text(
-        `System: ${item.system}`,
-        margin + segW * 2 + 4,
-        cursorY + 13
-      );
-      pdf.text(
-        `Farbe: ${item.colorOuter}`,
-        margin + segW * 3 + 4,
-        cursorY + 13
-      );
+      pdf.text(`Menge: ${item.quantity}`, margin + segW + 4, cursorY + 13);
+      pdf.text(`System: ${item.system}`, margin + segW * 2 + 4, cursorY + 13);
+      pdf.text(`Farbe: ${item.colorOuter}`, margin + segW * 3 + 4, cursorY + 13);
       cursorY += boxH + 8;
 
-      // 7b) Images
+      // 7b) window.svg preview on right
+      let previewH = 0;
+      if (item.windowSvgUrl && item.widthMm > 0 && item.heightMm > 0) {
+        const previewW = 80; // pts
+        const aspectRatio = item.heightMm / item.widthMm || 1;
+        previewH = previewW * aspectRatio;
+        try {
+          // fetch per-item SVG
+          const resSvg = await fetch(item.windowSvgUrl);
+          const svgText = await resSvg.text();
+          const dataUri =
+            "data:image/svg+xml;base64," +
+            btoa(unescape(encodeURIComponent(svgText)));
+          pdf.addImage(
+            dataUri,
+            "SVG",
+            pageWidth - margin - previewW,
+            cursorY,
+            previewW,
+            previewH
+          );
+        } catch (err) {
+          console.warn("Could not render window.svg preview:", err);
+        }
+      }
+
+      // 7c) inside/outside images
+      let imageH = 0;
       if (item.images.insideView) {
         try {
           pdf.addImage(item.images.insideView, "JPEG", margin, cursorY, 200, 120);
+          imageH = 120;
         } catch {}
       }
       if (item.images.outsideView) {
@@ -617,13 +587,17 @@ export default function OfferFormPage() {
             200,
             120
           );
+          imageH = Math.max(imageH, 120);
         } catch {}
       }
-      if (item.images.insideView || item.images.outsideView) {
-        cursorY += 120 + 8;
+
+      // advance cursor below the tallest graphic
+      const graphicHeight = Math.max(previewH, imageH);
+      if (graphicHeight > 0) {
+        cursorY += graphicHeight + 8;
       }
 
-      // 7c) Frame details
+      // 7d) Frame details table
       const frameRows = [
         ["Rahmen", item.frameType],
         ["Außen Farbe", item.colorOuter],
@@ -647,7 +621,6 @@ export default function OfferFormPage() {
         ["Gewichtseinheit", item.weightUnit],
         ["Umrandung", item.perimeter],
       ];
-
       autoTable(pdf, {
         startY: cursorY,
         margin: { left: margin, right: margin },
@@ -662,7 +635,7 @@ export default function OfferFormPage() {
       });
       cursorY = pdf.lastAutoTable.finalY + 10;
 
-      // 7d) Accessories
+      // 7e) Accessories
       if (item.accessories.length) {
         const accRows = item.accessories.map((a) => [
           a.description || a.code,
@@ -682,7 +655,7 @@ export default function OfferFormPage() {
         cursorY = pdf.lastAutoTable.finalY + 10;
       }
 
-      // 7e) Fillings
+      // 7f) Fillings
       if (item.fillings.length) {
         const fillRows = item.fillings.map((f) => {
           const price = parseFloat(f.price) || 0;
@@ -721,7 +694,7 @@ export default function OfferFormPage() {
         cursorY = pdf.lastAutoTable.finalY + 10;
       }
 
-      // 7f) Fenster total
+      // 7g) Fenster total
       const net = computeLineTotalNet(item);
       const afterGlobal = net * (1 - (parseFloat(totalDiscount) || 0) / 100);
       const vatAmt = useNetPrices
@@ -746,7 +719,7 @@ export default function OfferFormPage() {
       }
     }
 
-    // --- (8) OVERALL TOTALS ---
+    // (8) OVERALL TOTALS
     pdf.setFontSize(10).setTextColor("#000");
     const tx = pageWidth - margin - 200;
     let ty = cursorY + 20;
@@ -778,16 +751,13 @@ export default function OfferFormPage() {
     pdf.setFont(undefined, "normal");
     cursorY = ty + 40;
 
-    // --- (9) FOOTER TEXT ---
+    // (9) FOOTER TEXT
     pdf.setFontSize(10).setTextColor("#333");
-    const footerLines = pdf.splitTextToSize(
-      footerText,
-      pageWidth - margin * 2
-    );
+    const footerLines = pdf.splitTextToSize(footerText, pageWidth - margin * 2);
     pdf.text(footerLines, margin, cursorY);
     cursorY += footerLines.length * 12 + 20;
 
-    // --- (10) MORE OPTIONS SUMMARY ---
+    // (10) MORE OPTIONS SUMMARY
     pdf.setFontSize(9).setTextColor("#555");
     pdf.text("----- More Options -----", margin, cursorY);
     cursorY += 12;
@@ -807,13 +777,11 @@ export default function OfferFormPage() {
     if (reverseCharge) vatLine = "Reverse charge (§13b UStG)";
     pdf.text(`VAT Option: ${vatLine}`, margin, cursorY);
 
-    // --- (11) SAVE PDF ---
+    // (11) SAVE PDF
     pdf.save(`Angebot-${offerNumber || "new"}.pdf`);
   };
 
-  // ──────────────────────────────────────────────────────────────────────────────
   // 9) FORM SUBMIT HANDLER
-  // ──────────────────────────────────────────────────────────────────────────────
   const handleSubmitForm = async (e) => {
     e.preventDefault();
     if (!contactName.trim() || !offerNumber.trim()) {
@@ -835,9 +803,7 @@ export default function OfferFormPage() {
     await generatePDF();
   };
 
-  // ──────────────────────────────────────────────────────────────────────────────
   // 10) RENDER
-  // ──────────────────────────────────────────────────────────────────────────────
   if (profileLoading || catalogLoading) {
     return (
       <div className="offer-form-page">
@@ -884,11 +850,11 @@ export default function OfferFormPage() {
       )}
 
       <form onSubmit={handleSubmitForm}>
-        {/* ──────────────────────────────────────────────────────────── */}
         {/* SECTION 1: CONTACT & OFFER INFORMATION */}
-        {/* ──────────────────────────────────────────────────────────── */}
         <section className="section contact-offer-info">
-          <div className="section-header">CONTACT AND OFFER INFORMATION</div>
+          <div className="section-header">
+            CONTACT AND OFFER INFORMATION
+          </div>
           <div className="two-columns">
             {/* Left Column */}
             <div className="column left-col">
@@ -979,9 +945,7 @@ export default function OfferFormPage() {
                   />
                 </div>
                 <div className="field-group">
-                  <label className="label">
-                    Reference / Order number
-                  </label>
+                  <label className="label">Reference / Order number</label>
                   <input
                     type="text"
                     className="input full-width"
@@ -994,9 +958,7 @@ export default function OfferFormPage() {
           </div>
         </section>
 
-        {/* ──────────────────────────────────────────────────────────── */}
         {/* SECTION 2: HEADER TEXT */}
-        {/* ──────────────────────────────────────────────────────────── */}
         <section className="section header-text">
           <div className="section-header">HEADER TEXT</div>
           <textarea
@@ -1007,9 +969,7 @@ export default function OfferFormPage() {
           />
         </section>
 
-        {/* ──────────────────────────────────────────────────────────── */}
         {/* SECTION 3: PRODUCTS */}
-        {/* ──────────────────────────────────────────────────────────── */}
         <section className="section products-section">
           <div className="section-header">PRODUCTS</div>
 
@@ -1017,18 +977,14 @@ export default function OfferFormPage() {
           <div className="net-gross-toggle">
             <button
               type="button"
-              className={`toggle-btn ${
-                useNetPrices ? "active" : ""
-              }`}
+              className={`toggle-btn ${useNetPrices ? "active" : ""}`}
               onClick={toggleNetGross}
             >
               Net
             </button>
             <button
               type="button"
-              className={`toggle-btn ${
-                !useNetPrices ? "active" : ""
-              }`}
+              className={`toggle-btn ${!useNetPrices ? "active" : ""}`}
               onClick={toggleNetGross}
             >
               Gross
@@ -1068,11 +1024,7 @@ export default function OfferFormPage() {
 
           {/* Footer Links */}
           <div className="products-footer-links">
-            <button
-              type="button"
-              className="add-link"
-              onClick={handleAddItem}
-            >
+            <button type="button" className="add-link" onClick={handleAddItem}>
               + Add position
             </button>
             <button
@@ -1086,9 +1038,7 @@ export default function OfferFormPage() {
 
           {/* Global Discount */}
           <div className="global-discount">
-            <label className="label small-label">
-              Total Discount (%):
-            </label>
+            <label className="label small-label">Total Discount (%):</label>
             <input
               type="number"
               min="0"
@@ -1103,12 +1053,8 @@ export default function OfferFormPage() {
           {/* Totals */}
           <div className="totals-area">
             <div className="totals-row">
-              <div className="totals-label">
-                Subtotal (before discount):
-              </div>
-              <div className="totals-value">
-                {computeSubTotal().toFixed(2)} €
-              </div>
+              <div className="totals-label">Subtotal (before discount):</div>
+              <div className="totals-value">{computeSubTotal().toFixed(2)} €</div>
             </div>
             {parseFloat(totalDiscount) > 0 && (
               <div className="totals-row">
@@ -1123,9 +1069,7 @@ export default function OfferFormPage() {
             {useNetPrices && (
               <div className="totals-row">
                 <div className="totals-label">VAT Total:</div>
-                <div className="totals-value">
-                  {computeTotalVAT().toFixed(2)} €
-                </div>
+                <div className="totals-value">{computeTotalVAT().toFixed(2)} €</div>
               </div>
             )}
             <div className="totals-row grand-total">
@@ -1141,9 +1085,7 @@ export default function OfferFormPage() {
           </div>
         </section>
 
-        {/* ──────────────────────────────────────────────────────────── */}
         {/* SECTION 4: FOOTER TEXT */}
-        {/* ──────────────────────────────────────────────────────────── */}
         <section className="section footer-text">
           <div className="section-header">FOOTER TEXT</div>
           <textarea
@@ -1154,9 +1096,7 @@ export default function OfferFormPage() {
           />
         </section>
 
-        {/* ──────────────────────────────────────────────────────────── */}
         {/* SECTION 5: MORE OPTIONS */}
-        {/* ──────────────────────────────────────────────────────────── */}
         <section className="section more-options">
           <div className="section-header">
             MORE OPTIONS
@@ -1185,9 +1125,7 @@ export default function OfferFormPage() {
                   </select>
                 </div>
                 <div className="column">
-                  <label className="label">
-                    Internal Contact Person
-                  </label>
+                  <label className="label">Internal Contact Person</label>
                   <input
                     type="text"
                     className="input full-width"
@@ -1276,9 +1214,7 @@ export default function OfferFormPage() {
           )}
         </section>
 
-        {/* ──────────────────────────────────────────────────────────── */}
         {/* SUBMIT BUTTON */}
-        {/* ──────────────────────────────────────────────────────────── */}
         <div className="form-actions">
           <button type="submit" className="btn-primary">
             Save &amp; Generate PDF

@@ -18,10 +18,48 @@
   text-align: right;
 }
 
+.col-image {
+  flex: 0 0 50px;
+  justify-content: center;
+
+  .product-thumbnail {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+
+  .placeholder {
+    width: 40px;
+    height: 40px;
+    background: #f0f0f0;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+  }
+}
+
 .col-product {
   flex: 1 1 200px;
   display: flex;
   align-items: center;
+}
+
+.col-width,
+.col-height {
+  flex: 0 0 100px;
+  flex-direction: column;
+
+  input {
+    width: 80px;
+    text-align: right;
+  }
+  &::after {
+    content: "mm";
+    margin-left: 4px;
+    font-size: 0.85rem;
+    color: #555;
+  }
 }
 
 .col-qty {
@@ -114,4 +152,19 @@
   font-size: 12px;
   color: #666;
   padding: 4px 0;
+}
+
+/* ---- Window preview row ---- */
+.window-preview-row {
+  padding: 8px 0 16px;
+  margin-left: 50px;  // align under the other cols
+  border-bottom: 1px solid #e0e0e0;
+
+  .window-preview {
+    /* if you imported WindowPreview.scss, these apply automatically */
+    /* otherwise: */
+    border: 1px solid #ccc;
+    background: #f9f9f9;
+    overflow: hidden;
+  }
 }

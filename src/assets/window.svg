@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- window.svg -->
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="0 0 1033 778"
+     width="1033"
+     height="778"
+     version="1.1"
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     fill-rule="evenodd"
+     xml:space="preserve">
+
+  <defs>
+    <clipPath id="clipId0">
+      <path d="M0,778 1033,778 1033,0 0,0 z" />
+    </clipPath>
+  </defs>
+
+  <g fill="none" stroke="rgb(0,0,0)" stroke-width="0.4"></g>
+  <g fill="rgb(127,255,255)" stroke="rgb(127,255,255)" stroke-width="1">
+    <path d="M254.28,653.49 254.28,70.074 724.28,653.49 z" />
+    <path d="M724.28,653.49 254.28,70.074 724.28,70.074 z" />
+  </g>
+  <g fill="none" stroke="rgb(45,45,45)" stroke-width="1">
+    <polyline points="724.28,653.49 724.28,70.074 254.28,70.074 254.28,653.49 724.28,653.49 " />
+  </g>
+  <g fill="rgb(183,183,183)" stroke="rgb(183,183,183)" stroke-width="1">
+    <path d="M242.03,697.49 210.28,697.49 242.03,665.74 z" />
+    <path d="M242.03,697.49 242.03,665.74 736.53,697.49 z" />
+    <path d="M736.53,697.49 242.03,665.74 736.53,665.74 z" />
+    <path d="M736.53,697.49 736.53,665.74 768.28,697.49 z" />
+  </g>
+  <g fill="none" stroke="rgb(45,45,45)" stroke-width="1">
+    <polyline points="210.28,697.49 768.28,697.49 " />
+    <polyline points="768.28,697.49 736.53,665.74 " />
+    <polyline points="736.53,665.74 242.03,665.74 " />
+    <polyline points="242.03,665.74 210.28,697.49 " />
+  </g>
+  <g fill="rgb(183,183,183)" stroke="rgb(183,183,183)" stroke-width="1">
+    <path d="M736.53,665.74 736.53,57.825 768.28,697.49 z" />
+    <path d="M768.28,697.49 736.53,57.825 768.28,26.068 z" />
+  </g>
+  <g fill="none" stroke="rgb(45,45,45)" stroke-width="1">
+    <polyline points="768.28,697.49 768.28,26.068 " />
+    <polyline points="768.28,26.068 736.53,57.825 " />
+    <polyline points="736.53,57.825 736.53,665.74 " />
+    <polyline points="736.53,665.74 768.28,697.49 " />
+  </g>
+  <g fill="rgb(183,183,183)" stroke="rgb(183,183,183)" stroke-width="1">
+    <path d="M242.03,57.825 210.28,26.068 242.03,26.068 z" />
+    <path d="M242.03,57.825 242.03,26.068 736.53,57.825 z" />
+    <path d="M736.53,57.825 242.03,26.068 736.53,26.068 z" />
+    <path d="M736.53,57.825 736.53,26.068 768.28,26.068 z" />
+  </g>
+  <g fill="none" stroke="rgb(45,45,45)" stroke-width="1">
+    <polyline points="768.28,26.068 210.28,26.068 " />
+    <polyline points="210.28,26.068 242.03,57.825 " />
+    <polyline points="242.03,57.825 736.53,57.825 " />
+    <polyline points="736.53,57.825 768.28,26.068 " />
+  </g>
+  <g fill="rgb(183,183,183)" stroke="rgb(183,183,183)" stroke-width="1">
+    <path d="M210.28,697.49 210.28,26.068 242.03,665.74 z" />
+    <path d="M242.03,665.74 210.28,26.068 242.03,57.825 z" />
+  </g>
+  <g fill="none" stroke="rgb(45,45,45)" stroke-width="1">
+    <polyline points="210.28,26.068 210.28,697.49 " />
+    <polyline points="210.28,697.49 242.03,665.74 " />
+    <polyline points="242.03,665.74 242.03,57.825 " />
+    <polyline points="242.03,57.825 210.28,26.068 " />
+  </g>
+  <g fill="rgb(183,183,183)" stroke="rgb(183,183,183)" stroke-width="1">
+    <path d="M263.81,681.16 226.61,681.16 263.81,643.96 z" />
+    <path d="M263.81,681.16 263.81,643.96 714.75,681.16 z" />
+    <path d="M714.75,681.16 263.81,643.96 714.75,643.96 z" />
+    <path d="M714.75,681.16 714.75,643.96 751.95,681.16 z" />
+  </g>
+  <g fill="none" stroke="rgb(45,45,45)" stroke-width="1">
+    <polyline points="226.61,681.16 751.95,681.16 " />
+    <polyline points="751.95,681.16 714.75,643.96 " />
+    <polyline points="714.75,643.96 263.81,643.96 " />
+    <polyline points="263.81,643.96 226.61,681.16 " />
+  </g>
+  <g fill="rgb(183,183,183)" stroke="rgb(183,183,183)" stroke-width="1">
+    <path d="M714.75,643.96 714.75,79.601 751.95,681.16 z" />
+    <path d="M751.95,681.16 714.75,79.601 751.95,42.4 z" />
+  </g>
+  <g fill="none" stroke="rgb(45,45,45)" stroke-width="1">
+    <polyline points="751.95,681.16 751.95,42.4 " />
+    <polyline points="751.95,42.4 714.75,79.601 " />
+    <polyline points="714.75,79.601 714.75,643.96 " />
+    <polyline points="714.75,643.96 751.95,681.16 " />
+  </g>
+  <g fill="rgb(183,183,183)" stroke="rgb(183,183,183)" stroke-width="1">
+    <path d="M263.81,79.601 226.61,42.4 263.81,42.4 z" />
+    <path d="M263.81,79.601 263.81,42.4 714.75,79.601 z" />
+    <path d="M714.75,79.601 263.81,42.4 714.75,42.4 z" />
+    <path d="M714.75,79.601 714.75,42.4 751.95,42.4 z" />
+  </g>
+  <g fill="none" stroke="rgb(45,45,45)" stroke-width="1">
+    <polyline points="751.95,42.4 226.61,42.4 " />
+    <polyline points="226.61,42.4 263.81,79.601 " />
+    <polyline points="263.81,79.601 714.75,79.601 " />
+    <polyline points="714.75,79.601 751.95,42.4 " />
+  </g>
+  <g fill="rgb(183,183,183)" stroke="rgb(183,183,183)" stroke-width="1">
+    <path d="M226.61,681.16 226.61,42.4 263.81,643.96 z" />
+    <path d="M263.81,643.96 226.61,42.4 263.81,79.601 z" />
+  </g>
+  <g fill="none" stroke="rgb(45,45,45)" stroke-width="1">
+    <polyline points="226.61,42.4 226.61,681.16 " />
+    <polyline points="226.61,681.16 263.81,643.96 " />
+    <polyline points="263.81,643.96 263.81,79.601 " />
+    <polyline points="263.81,79.601 226.61,42.4 " />
+  </g>
+  <g fill="rgb(137,137,137)" stroke="rgb(137,137,137)" stroke-width="1">
