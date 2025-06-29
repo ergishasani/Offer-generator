@@ -101,12 +101,24 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
   tableCellDescription: {
-    width: "35%",
+    width: "30%", // Adjusted width to make space for image
     paddingLeft: 4,
     fontSize: 9,
   },
+  tableCellItemImage: { // New style for the image cell in the table
+    width: "10%", // Allocate 10% width for the image column
+    padding: 2,
+    textAlign: "center", // Center the image if it's smaller than cell
+    alignItems: "center", // For vertical centering in flex
+    justifyContent: "center", // For horizontal centering in flex
+  },
+  itemImage: { // Style for the actual image
+    maxWidth: "100%",
+    maxHeight: 30, // Max height for the image in the table row
+    objectFit: "contain",
+  },
   tableCellDimensions: {
-    width: "15%",
+    width: "10%", // Adjusted width
     textAlign: "center",
     fontSize: 9,
   },
@@ -297,6 +309,7 @@ const OfferPdf = ({ data }) => {
           <View style={styles.tableHeader}>
             <Text style={styles.tableCellPos}>Pos.</Text>
             <Text style={styles.tableCellDescription}>Bezeichnung</Text>
+            <Text style={styles.tableCellItemImage}>Bild</Text> {/* Header for the new Image column */}
             <Text style={styles.tableCellDimensions}>Breite × Höhe (mm)</Text>
             <Text style={styles.tableCellColor}>Farbe</Text>
             <Text style={styles.tableCellQty}>Menge</Text>
@@ -307,10 +320,21 @@ const OfferPdf = ({ data }) => {
           {/* Each item row */}
           {items.map((item, idx) => {
             const lineTotal = calculateLineTotal(item).toFixed(2);
+            // Assuming 'item.interiorImage' holds the base64 data URI for the product image.
+            // This field name might need adjustment based on actual data structure from OfferFormPage.
+            const productImageSrc = item.interiorImage || item.productImageBase64 || item.windowSvgDataUri;
+
             return (
               <View style={styles.tableRow} key={idx}>
                 <Text style={styles.tableCellPos}>{item.pos}</Text>
                 <Text style={styles.tableCellDescription}>{item.description}</Text>
+                <View style={styles.tableCellItemImage}>
+                  {productImageSrc ? (
+                    <Image style={styles.itemImage} src={productImageSrc} />
+                  ) : (
+                    <Text>-</Text> // Placeholder if no image
+                  )}
+                </View>
                 <Text style={styles.tableCellDimensions}>
                   {item.width}×{item.height}
                 </Text>

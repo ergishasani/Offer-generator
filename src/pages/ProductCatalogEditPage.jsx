@@ -18,7 +18,7 @@ import NavBar from "../components/NavBar";
 
 import "../assets/styles/pages/_productEditPage.scss";
 
-// This component is ProductCatalogEditPage, but the filename is CatalogPage.jsx as per previous context
+// This is ProductFormEditorPage (content of ProductCatalogEditPage.jsx file)
 export default function ProductCatalogEditPage() {
   const { currentUser } = useAuth();
   const { productId } = useParams();
@@ -28,7 +28,7 @@ export default function ProductCatalogEditPage() {
   const [product, setProduct] = useState(null); // Stores original fetched product
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [isGlobalProduct, setIsGlobalProduct] = useState(false);
+  const [isGlobalProductState, setIsGlobalProductState] = useState(false); // State to hold isGlobal
 
   // Local copy for editing:
   const [local, setLocal] = useState(null);
@@ -37,10 +37,11 @@ export default function ProductCatalogEditPage() {
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const isGlobal = queryParams.get('isGlobal') === 'true';
-    setIsGlobalProduct(isGlobal);
+    setIsGlobalProductState(isGlobal); // Set state
 
     // If trying to edit a user-specific product and not logged in, redirect.
     if (!isGlobal && !currentUser) {
+      console.log("User not logged in, redirecting to login.");
       navigate("/login");
       return;
     }
@@ -50,12 +51,11 @@ export default function ProductCatalogEditPage() {
     if (isGlobal) {
       docRef = doc(db, "products", productId);
       console.log(`Fetching global product: products/${productId}`);
-    } else if (currentUser) { // Only try to fetch user product if currentUser exists
+    } else if (currentUser) {
       docRef = doc(db, "users", currentUser.uid, "products", productId);
       console.log(`Fetching user product: users/${currentUser.uid}/products/${productId}`);
     } else {
-      // Should not happen if !isGlobal && !currentUser check above works, but as a fallback:
-      console.error("Cannot fetch user product: user not logged in.");
+      console.error("Cannot determine product path: User not available for user product.");
       setLoading(false);
       setProduct(null);
       setLocal(null);
@@ -70,10 +70,9 @@ export default function ProductCatalogEditPage() {
           setLocal(null);
         } else {
           const data = snap.data();
-          setProduct({ id: snap.id, ...data }); // Store original product
-          // Initialize local state with Firestore data:
+          setProduct({ id: snap.id, ...data });
           setLocal({
-            id: snap.id, // Keep id in local for reference if needed, but don't save it back directly
+            id: snap.id,
             ...data,
             accessories: data.accessories || [],
             fillings: data.fillings || [],
@@ -88,7 +87,7 @@ export default function ProductCatalogEditPage() {
       .finally(() => {
         setLoading(false);
       });
-  }, [productId, currentUser, navigate, location.search]);
+  }, [productId, currentUser, navigate, location.search]); // location.search as dependency
 
   if (loading) {
     return (
@@ -111,10 +110,21 @@ export default function ProductCatalogEditPage() {
 
   // Helper: update a top‐level field in local state
   const handleChange = (field, value) => {
-    setLocal((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setLocal((prev) => {
+      if (!prev) return null; // Should not happen if initial loading is correct
+      let processedValue = value;
+      const numericFields = ['quantity', 'unitPrice', 'vat', 'discount'];
+
+      if (numericFields.includes(field)) {
+        if (value === "" || value === null || typeof value === 'undefined') {
+          processedValue = null;
+        } else {
+          const num = parseFloat(value);
+          processedValue = isNaN(num) ? null : num;
+        }
+      }
+      return { ...prev, [field]: processedValue };
+    });
   };
 
   // ACCESSORIES CRUD
@@ -128,10 +138,24 @@ export default function ProductCatalogEditPage() {
     }));
   };
   const handleAccessoryChange = (index, field, value) => {
-    const updated = [...(local.accessories || [])];
-    updated[index][field] =
-      field === "qty" ? Number(value) : value;
-    setLocal((prev) => ({ ...prev, accessories: updated }));
+    setLocal(prev => {
+      if (!prev || !prev.accessories) return prev;
+      const updatedAccessories = [...prev.accessories];
+      const targetAccessory = { ...updatedAccessories[index] };
+
+      if (field === "qty") {
+        if (value === "" || value === null || typeof value === 'undefined') {
+          targetAccessory[field] = null;
+        } else {
+          const num = parseInt(value, 10);
+          targetAccessory[field] = isNaN(num) ? null : num;
+        }
+      } else {
+        targetAccessory[field] = value;
+      }
+      updatedAccessories[index] = targetAccessory;
+      return { ...prev, accessories: updatedAccessories };
+    });
   };
   const handleRemoveAccessory = (index) => {
     const updated = [...(local.accessories || [])];
@@ -150,13 +174,24 @@ export default function ProductCatalogEditPage() {
     }));
   };
   const handleFillingChange = (index, field, value) => {
-    const updated = [...(local.fillings || [])];
-    if (field === "price" || field === "discountPercent") {
-      updated[index][field] = Number(value);
-    } else {
-      updated[index][field] = value;
-    }
-    setLocal((prev) => ({ ...prev, fillings: updated }));
+    setLocal(prev => {
+      if (!prev || !prev.fillings) return prev;
+      const updatedFillings = [...prev.fillings];
+      const targetFilling = { ...updatedFillings[index] };
+
+      if (field === "price" || field === "discountPercent") {
+        if (value === "" || value === null || typeof value === 'undefined') {
+          targetFilling[field] = null;
+        } else {
+          const num = parseFloat(value);
+          targetFilling[field] = isNaN(num) ? null : num;
+        }
+      } else {
+        targetFilling[field] = value;
+      }
+      updatedFillings[index] = targetFilling;
+      return { ...prev, fillings: updatedFillings };
+    });
   };
   const handleRemoveFilling = (index) => {
     const updated = [...(local.fillings || [])];
@@ -164,16 +199,18 @@ export default function ProductCatalogEditPage() {
     setLocal((prev) => ({ ...prev, fillings: updated }));
   };
 
-  // Save back to Firestore, then navigate to /products
+  // Save back to Firestore, then navigate to /catalog
   const handleSave = async () => {
     if (!local) {
       console.error("Local data is not set. Cannot save.");
+      alert("Product data not loaded, cannot save.");
       return;
     }
     setSaving(true);
     try {
       let docRef;
-      if (isGlobalProduct) {
+      // Use isGlobalProductState which is set in useEffect
+      if (isGlobalProductState) {
         docRef = doc(db, "products", productId);
         console.log(`Saving global product: products/${productId}`);
       } else if (currentUser) {
@@ -181,26 +218,46 @@ export default function ProductCatalogEditPage() {
         console.log(`Saving user product: users/${currentUser.uid}/products/${productId}`);
       } else {
         console.error("Cannot save product: user not logged in for user-specific product or path determination error.");
+        alert("Error: User not authenticated for this action.");
         setSaving(false);
         return;
       }
 
-      // Exclude 'id' from the data to be saved if it's part of 'local' state
       const { id, ...dataToSave } = local;
 
       await updateDoc(docRef, {
-        ...dataToSave, // Spread the actual fields of the product
+        ...dataToSave,
         updatedAt: serverTimestamp(),
       });
-      // Navigate back to the main catalog page after saving
       navigate("/catalog");
     } catch (err) {
       console.error("Error saving product:", err);
-      alert("Error saving product: " + err.message); // Show error to user
+      alert("Error saving product: " + err.message);
     } finally {
       setSaving(false);
     }
   };
+
+  // Conditional rendering for loading and if product data 'local' is not available
+  if (loading) {
+    return (
+      <div className="product-edit-page">
+        <NavBar />
+        <p>Loading product...</p>
+      </div>
+    );
+  }
+
+  if (!local) { // If not loading and local is still null (e.g. product not found or error)
+    return (
+      <div className="product-edit-page">
+        <NavBar />
+        <h2>Product Not Found or Error Loading.</h2>
+        <p>Please check the product ID or try again. If the issue persists, contact support.</p>
+        <button onClick={() => navigate("/catalog")}>Back to Catalog</button>
+      </div>
+    );
+  }
 
   return (
     <div className="product-edit-page">

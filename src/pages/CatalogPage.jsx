@@ -221,18 +221,14 @@ export default function CatalogPage() {
 
   // Updated to navigate for both global and user products, passing a query parameter
   const handleEditProduct = (prod) => {
-    // Determine if the product is global; 'isUserOnly' means NOT global in this context
     const isGlobalProduct = !prod.isUserOnly;
 
-    // For user-specific products, ensure the user is logged in.
-    // For global products, we might allow viewing/editing based on different rules,
-    // but for now, we'll assume if they can see it on this page, they can try to edit.
-    // The target editor page will ultimately be protected by PrivateRoute or AdminRoute if needed.
-    if (!isGlobalProduct && !user) {
+    if (!isGlobalProduct && !user) { // For user-specific products, user must be logged in
         alert("Bitte melden Sie sich an, um dieses Produkt zu bearbeiten.");
         return;
     }
-
+    // For global products, admin checks etc. would ideally be on the target page or via routing rules.
+    // Here, we just navigate.
     navigate(`/products/${prod.id}/edit?isGlobal=${isGlobalProduct}`);
   };
 
