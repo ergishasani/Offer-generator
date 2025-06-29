@@ -6,57 +6,69 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-// import { useAuth } from "../contexts/AuthContext"; // Not strictly needed if editing global products
+import { useAuth } from "../contexts/AuthContext";
 import {
+  doc,
+  getDoc,
+  updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
-// import { db } from "../services/firebase"; // Service will handle db interaction
-import { getCatalogProduct, updateCatalogProduct } from "../services/catalogService";
+import { db } from "../services/firebase";
 import NavBar from "../components/NavBar";
 
 import "../assets/styles/pages/_productEditPage.scss";
 
 export default function ProductCatalogEditPage() {
-  // const { currentUser } = useAuth(); // Assuming global product editing doesn't require user context directly here
+  const { currentUser } = useAuth();
   const { productId } = useParams();
   const navigate = useNavigate();
 
-  const [product, setProduct] = useState(null); // Stores the original fetched product
+  const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   // Local copy for editing:
-  const [local, setLocal] = useState(null); // Form data state
+  const [local, setLocal] = useState(null);
 
-  // 1) Fetch the product document from Firestore using catalogService:
+  // 1) Fetch the product document from Firestore:
   useEffect(() => {
-    setLoading(true);
-    getCatalogProduct(productId)
-      .then((productData) => {
-        if (!productData) {
-          console.warn("No such global product found:", productId);
+    if (!currentUser) {
+      navigate("/login");
+      return;
+    }
+
+    const docRef = doc(
+      db,
+      "users",
+      currentUser.uid,
+      "products",
+      productId
+    );
+    getDoc(docRef)
+      .then((snap) => {
+        if (!snap.exists()) {
+          console.warn("No such product:", productId);
           setProduct(null);
           setLocal(null);
         } else {
-          setProduct(productData); // productData from service includes id
+          const data = snap.data();
+          setProduct({ id: snap.id, ...data });
           // Initialize local state with Firestore data:
           setLocal({
-            ...productData, // Spread all fields from productData
-            // Ensure arrays exist, even if productData might not have them initially
-            accessories: productData.accessories || [],
-            fillings: productData.fillings || [],
+            ...(data || {}),
+            // Ensure arrays exist:
+            accessories: data.accessories || [],
+            fillings: data.fillings || [],
           });
         }
       })
       .catch((err) => {
-        console.error("Error fetching global product:", err);
-        setProduct(null);
-        setLocal(null);
+        console.error("Error fetching product:", err);
       })
       .finally(() => {
         setLoading(false);
       });
-  }, [productId]);
+  }, [currentUser, productId, navigate]);
 
   if (loading) {
     return (
@@ -82,16 +94,13 @@ export default function ProductCatalogEditPage() {
     setLocal((prev) => {
       let processedValue = value;
       const numericFields = ['quantity', 'unitPrice', 'vat', 'discount'];
-      // Note: 'price' and 'discountPercent' for accessories/fillings are handled in their specific functions.
 
       if (numericFields.includes(field)) {
         if (value === "" || value === null || typeof value === 'undefined') {
-          processedValue = null; // Store as null if empty or undefined
+          processedValue = null;
         } else {
           const num = parseFloat(value);
-          // Keep previous value if parse fails, otherwise use the parsed number.
-          // Or, if strict, set to null on parse failure: isNaN(num) ? null : num;
-          processedValue = isNaN(num) ? prev[field] : num;
+          processedValue = isNaN(num) ? null : num;
         }
       }
       return { ...prev, [field]: processedValue };
@@ -111,9 +120,12 @@ export default function ProductCatalogEditPage() {
   const handleAccessoryChange = (index, field, value) => {
     const updated = [...(local.accessories || [])];
     if (field === "qty") {
-      const num = parseInt(value, 10);
-      // Ensure qty is a number or null if input is empty/invalid
-      updated[index][field] = isNaN(num) ? null : num;
+      if (value === "" || value === null || typeof value === 'undefined') {
+        updated[index][field] = null;
+      } else {
+        const num = parseInt(value, 10); // Qty is likely an integer
+        updated[index][field] = isNaN(num) ? null : num;
+      }
     } else {
       updated[index][field] = value;
     }
@@ -138,9 +150,12 @@ export default function ProductCatalogEditPage() {
   const handleFillingChange = (index, field, value) => {
     const updated = [...(local.fillings || [])];
     if (field === "price" || field === "discountPercent") {
-      const num = parseFloat(value);
-      // Ensure price/discount are numbers or null if input is empty/invalid
-      updated[index][field] = isNaN(num) ? null : num;
+      if (value === "" || value === null || typeof value === 'undefined') {
+        updated[index][field] = null;
+      } else {
+        const num = parseFloat(value);
+        updated[index][field] = isNaN(num) ? null : num;
+      }
     } else {
       updated[index][field] = value;
     }
@@ -154,40 +169,27 @@ export default function ProductCatalogEditPage() {
 
   // Save back to Firestore, then navigate to /products
   const handleSave = async () => {
-    if (!local) {
-      console.error("No product data to save.");
-      return;
-    }
     setSaving(true);
     try {
-      // Remove 'id' from 'local' if it exists, as updateCatalogProduct expects only data fields.
-      // The 'id' is passed as a separate argument (productId).
-      const { id, ...dataToSave } = local;
-
-      await updateCatalogProduct(productId, {
-        ...dataToSave, // Spread the rest of the local data
-        updatedAt: serverTimestamp(), // Add/update the timestamp
+      const docRef = doc(
+        db,
+        "users",
+        currentUser.uid,
+        "products",
+        productId
+      );
+      // Ensure we write serverTimestamp for “updatedAt”
+      await updateDoc(docRef, {
+        ...local,
+        updatedAt: serverTimestamp(),
       });
-      navigate("/products"); // Or to a more relevant page like the main catalog admin page
+      navigate("/products");
     } catch (err) {
-      console.error("Error saving global product:", err);
-      // TODO: Add user-facing error message here
+      console.error("Error saving product:", err);
     } finally {
       setSaving(false);
     }
   };
-
-  // Ensure `local` is not null before rendering the form,
-  // otherwise, input values might cause errors if `local` is null initially.
-  if (!local && !loading) {
-    return (
-      <div className="product-edit-page">
-        <NavBar />
-        <h2>Product data could not be loaded.</h2>
-        <button onClick={() => navigate("/products")}>Back to Catalog</button>
-      </div>
-    );
-  }
 
   return (
     <div className="product-edit-page">

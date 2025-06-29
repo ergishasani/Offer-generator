@@ -101,22 +101,12 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
   tableCellDescription: {
-    width: "30%", // Adjusted width
+    width: "35%",
     paddingLeft: 4,
     fontSize: 9,
   },
-  tableCellImage: { // New style for image cell
-    width: "10%",
-    padding: 2,
-    textAlign: "center",
-  },
-  itemImage: { // New style for the image itself
-    maxWidth: "100%",
-    maxHeight: 40, // Adjust as needed
-    objectFit: "contain",
-  },
   tableCellDimensions: {
-    width: "10%", // Adjusted width
+    width: "15%",
     textAlign: "center",
     fontSize: 9,
   },
@@ -307,7 +297,6 @@ const OfferPdf = ({ data }) => {
           <View style={styles.tableHeader}>
             <Text style={styles.tableCellPos}>Pos.</Text>
             <Text style={styles.tableCellDescription}>Bezeichnung</Text>
-            <Text style={styles.tableCellImage}>Bild</Text> {/* New Header */}
             <Text style={styles.tableCellDimensions}>Breite × Höhe (mm)</Text>
             <Text style={styles.tableCellColor}>Farbe</Text>
             <Text style={styles.tableCellQty}>Menge</Text>
@@ -322,13 +311,6 @@ const OfferPdf = ({ data }) => {
               <View style={styles.tableRow} key={idx}>
                 <Text style={styles.tableCellPos}>{item.pos}</Text>
                 <Text style={styles.tableCellDescription}>{item.description}</Text>
-                <View style={styles.tableCellImage}>
-                  {item.interiorImage ? (
-                    <Image style={styles.itemImage} src={item.interiorImage} />
-                  ) : (
-                    <Text>-</Text>
-                  )}
-                </View>
                 <Text style={styles.tableCellDimensions}>
                   {item.width}×{item.height}
                 </Text>
