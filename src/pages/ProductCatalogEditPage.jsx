@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../services/firebase";
 import NavBar from "../components/NavBar";
+import WindowPreview from "../components/WindowPreview"; // Corrected path
 
 import "../assets/styles/pages/_productEditPage.scss";
 
@@ -39,9 +40,8 @@ export default function ProductCatalogEditPage() {
     const isGlobal = queryParams.get('isGlobal') === 'true';
     setIsGlobalProductState(isGlobal); // Set state
 
-    // If trying to edit a user-specific product and not logged in, redirect.
     if (!isGlobal && !currentUser) {
-      console.log("User not logged in, redirecting to login.");
+      console.log("User not logged in for user-specific product, redirecting to login.");
       navigate("/login");
       return;
     }
@@ -55,10 +55,10 @@ export default function ProductCatalogEditPage() {
       docRef = doc(db, "users", currentUser.uid, "products", productId);
       console.log(`Fetching user product: users/${currentUser.uid}/products/${productId}`);
     } else {
-      console.error("Cannot determine product path: User not available for user product.");
+      console.error("Cannot determine product path: User not available for user product and not global.");
       setLoading(false);
-      setProduct(null);
-      setLocal(null);
+      setProduct(null); // Ensure product state is reset
+      setLocal(null);   // Ensure local state is reset
       return;
     }
 
@@ -74,6 +74,9 @@ export default function ProductCatalogEditPage() {
           setLocal({
             id: snap.id,
             ...data,
+            widthMm: data.widthMm || null, // Initialize widthMm
+            heightMm: data.heightMm || null, // Initialize heightMm
+            windowSvgUrl: data.windowSvgUrl || "", // Initialize windowSvgUrl if it exists
             accessories: data.accessories || [],
             fillings: data.fillings || [],
           });
@@ -87,33 +90,14 @@ export default function ProductCatalogEditPage() {
       .finally(() => {
         setLoading(false);
       });
-  }, [productId, currentUser, navigate, location.search]); // location.search as dependency
-
-  if (loading) {
-    return (
-      <div className="product-edit-page">
-        <NavBar />
-        <p>Loading product…</p>
-      </div>
-    );
-  }
-
-  if (!product) {
-    return (
-      <div className="product-edit-page">
-        <NavBar />
-        <h2>Product not found</h2>
-        <button onClick={() => navigate("/products")}>Back to Catalog</button>
-      </div>
-    );
-  }
+  }, [productId, currentUser, navigate, location.search]);
 
   // Helper: update a top‐level field in local state
   const handleChange = (field, value) => {
     setLocal((prev) => {
-      if (!prev) return null; // Should not happen if initial loading is correct
+      if (!prev) return null;
       let processedValue = value;
-      const numericFields = ['quantity', 'unitPrice', 'vat', 'discount'];
+      const numericFields = ['quantity', 'unitPrice', 'vat', 'discount', 'widthMm', 'heightMm'];
 
       if (numericFields.includes(field)) {
         if (value === "" || value === null || typeof value === 'undefined') {
@@ -129,14 +113,18 @@ export default function ProductCatalogEditPage() {
 
   // ACCESSORIES CRUD
   const handleAddAccessory = () => {
-    setLocal((prev) => ({
-      ...prev,
-      accessories: [
-        ...(prev.accessories || []),
-        { code: "", description: "", qty: 1 },
-      ],
-    }));
+    setLocal((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        accessories: [
+          ...(prev.accessories || []),
+          { code: "", description: "", qty: 1 },
+        ],
+      };
+    });
   };
+
   const handleAccessoryChange = (index, field, value) => {
     setLocal(prev => {
       if (!prev || !prev.accessories) return prev;
@@ -158,21 +146,28 @@ export default function ProductCatalogEditPage() {
     });
   };
   const handleRemoveAccessory = (index) => {
-    const updated = [...(local.accessories || [])];
-    updated.splice(index, 1);
-    setLocal((prev) => ({ ...prev, accessories: updated }));
+    setLocal((prev) => {
+      if (!prev || !prev.accessories) return prev;
+      const updated = [...prev.accessories];
+      updated.splice(index, 1);
+      return { ...prev, accessories: updated };
+    });
   };
 
   // FILLINGS CRUD
   const handleAddFilling = () => {
-    setLocal((prev) => ({
-      ...prev,
-      fillings: [
-        ...(prev.fillings || []),
-        { id: "", spec: "", dimensions: "", price: 0, discountPercent: 0 },
-      ],
-    }));
+    setLocal((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        fillings: [
+          ...(prev.fillings || []),
+          { id: "", spec: "", dimensions: "", price: 0, discountPercent: 0 },
+        ],
+      };
+    });
   };
+
   const handleFillingChange = (index, field, value) => {
     setLocal(prev => {
       if (!prev || !prev.fillings) return prev;
@@ -193,10 +188,14 @@ export default function ProductCatalogEditPage() {
       return { ...prev, fillings: updatedFillings };
     });
   };
+
   const handleRemoveFilling = (index) => {
-    const updated = [...(local.fillings || [])];
-    updated.splice(index, 1);
-    setLocal((prev) => ({ ...prev, fillings: updated }));
+    setLocal((prev) => {
+      if (!prev || !prev.fillings) return prev;
+      const updated = [...prev.fillings];
+      updated.splice(index, 1);
+      return { ...prev, fillings: updated };
+    });
   };
 
   // Save back to Firestore, then navigate to /catalog
@@ -209,7 +208,6 @@ export default function ProductCatalogEditPage() {
     setSaving(true);
     try {
       let docRef;
-      // Use isGlobalProductState which is set in useEffect
       if (isGlobalProductState) {
         docRef = doc(db, "products", productId);
         console.log(`Saving global product: products/${productId}`);
@@ -248,11 +246,11 @@ export default function ProductCatalogEditPage() {
     );
   }
 
-  if (!local) { // If not loading and local is still null (e.g. product not found or error)
+  if (!local) {
     return (
       <div className="product-edit-page">
         <NavBar />
-        <h2>Product Not Found or Error Loading.</h2>
+        <h2>Product Not Found or Error Loading Data.</h2>
         <p>Please check the product ID or try again. If the issue persists, contact support.</p>
         <button onClick={() => navigate("/catalog")}>Back to Catalog</button>
       </div>
@@ -263,14 +261,22 @@ export default function ProductCatalogEditPage() {
     <div className="product-edit-page">
       <NavBar />
 
-      <h2>Edit Catalog Product</h2>
+      <h2>Edit Product</h2>
       <p>
-        (ID: <code>{product.id}</code>)
+        Editing: {isGlobalProductState ? "Global Product" : "Your Product"} (ID: <code>{local.id}</code>)
       </p>
 
-      {/* ────────────────────────────────────────────────────────────── */}
+      {/* SVG Preview Section */}
+      <div className="svg-preview-section" style={{ margin: '20px 0', padding: '10px', border: '1px solid #eee', backgroundColor: '#f9f9f9' }}>
+        <h4>Window Preview</h4>
+        <WindowPreview
+          widthMm={local.widthMm}
+          heightMm={local.heightMm}
+          svgUrl={local.windowSvgUrl} // Pass this if it exists, WindowPreview will use default if not
+        />
+      </div>
+
       {/* SECTION: Basic Fields (Name, Qty, Unit, Price, VAT, Discount) */}
-      {/* ────────────────────────────────────────────────────────────── */}
       <div className="field-group">
         <label className="label">Product Name</label>
         <input
@@ -335,6 +341,31 @@ export default function ProductCatalogEditPage() {
             className="input"
             value={local.discount}
             onChange={(e) => handleChange("discount", e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* SVG Preview Dimensions */}
+      <h3>Dimensions for SVG Preview</h3>
+      <div className="horizontal-group">
+        <div className="field-group small">
+          <label className="label">Width (mm)</label>
+          <input
+            type="number"
+            className="input"
+            value={local.widthMm ?? ''}
+            onChange={(e) => handleChange("widthMm", e.target.value)}
+            placeholder="e.g., 1000"
+          />
+        </div>
+        <div className="field-group small">
+          <label className="label">Height (mm)</label>
+          <input
+            type="number"
+            className="input"
+            value={local.heightMm ?? ''}
+            onChange={(e) => handleChange("heightMm", e.target.value)}
+            placeholder="e.g., 750"
           />
         </div>
       </div>
