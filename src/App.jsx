@@ -11,12 +11,10 @@ import RegisterPage from "./pages/RegisterPage";
 import ProfilePage from "./pages/ProfilePage";
 
 import ProductsPage from "./pages/ProductsPage";
-// ProductEditPage from db333df is actually OfferFormPage, avoid using it for product editing.
-// import ProductEditPage from "./pages/ProductEditPage";
+import ProductEditPage from "./pages/ProductEditPage";
 
 import OfferFormPage from "./pages/OfferFormPage";
-import CatalogListPage from "./pages/CatalogPage"; // Renamed for clarity: This is the LIST page
-import ProductFormEditorPage from "./pages/ProductCatalogEditPage"; // This is the actual EDITOR form page
+import ProductCatalogEditPage from "./pages/CatalogPage";
 import OffersPage from "./pages/OffersPage";
 
 // --- IMPORT ADMIN PAGES ---
@@ -78,7 +76,7 @@ function App() {
             path="/catalog"
             element={
               <PrivateRoute>
-                <CatalogListPage /> {/* Corrected: Renders the list page */}
+                <ProductCatalogEditPage />
               </PrivateRoute>
             }
           />
@@ -94,7 +92,7 @@ function App() {
             path="/products/:productId/edit"
             element={
               <PrivateRoute>
-                <ProductFormEditorPage /> {/* Corrected: Renders the actual editor form */}
+                <ProductEditPage />
               </PrivateRoute>
             }
           />

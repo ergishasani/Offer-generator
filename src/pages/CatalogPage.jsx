@@ -219,17 +219,16 @@ export default function CatalogPage() {
   // 6) Product Handlers
   // --------------------------------------------------
 
-  // Updated to navigate for both global and user products, passing a query parameter
+  // ← REPLACE prompt logic with a Router navigate to ProductEditPage:
   const handleEditProduct = (prod) => {
-    const isGlobalProduct = !prod.isUserOnly;
-
-    if (!isGlobalProduct && !user) { // For user-specific products, user must be logged in
-        alert("Bitte melden Sie sich an, um dieses Produkt zu bearbeiten.");
-        return;
+    if (!user || !prod.isUserOnly) {
+      alert(
+        `Das Produkt "${prod.productName}" stammt aus der globalen Datenbank und kann hier nicht bearbeitet werden.`
+      );
+      return;
     }
-    // For global products, admin checks etc. would ideally be on the target page or via routing rules.
-    // Here, we just navigate.
-    navigate(`/products/${prod.id}/edit?isGlobal=${isGlobalProduct}`);
+    // Einfach zur Edit‐Seite weiterleiten:
+    navigate(`/products/${prod.id}/edit`);
   };
 
   const handleDeleteProduct = async (prod) => {
