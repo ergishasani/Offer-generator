@@ -5,7 +5,7 @@
 // and return to the main ProductsPage.
 
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom"; // Import useLocation
 import { useAuth } from "../contexts/AuthContext";
 import {
   doc,
@@ -18,45 +18,63 @@ import NavBar from "../components/NavBar";
 
 import "../assets/styles/pages/_productEditPage.scss";
 
+// This component is ProductCatalogEditPage, but the filename is CatalogPage.jsx as per previous context
 export default function ProductCatalogEditPage() {
   const { currentUser } = useAuth();
   const { productId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation(); // For reading query parameters
 
-  const [product, setProduct] = useState(null);
+  const [product, setProduct] = useState(null); // Stores original fetched product
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isGlobalProduct, setIsGlobalProduct] = useState(false);
 
   // Local copy for editing:
   const [local, setLocal] = useState(null);
 
   // 1) Fetch the product document from Firestore:
   useEffect(() => {
-    if (!currentUser) {
+    const queryParams = new URLSearchParams(location.search);
+    const isGlobal = queryParams.get('isGlobal') === 'true';
+    setIsGlobalProduct(isGlobal);
+
+    // If trying to edit a user-specific product and not logged in, redirect.
+    if (!isGlobal && !currentUser) {
       navigate("/login");
       return;
     }
 
-    const docRef = doc(
-      db,
-      "users",
-      currentUser.uid,
-      "products",
-      productId
-    );
+    setLoading(true);
+    let docRef;
+    if (isGlobal) {
+      docRef = doc(db, "products", productId);
+      console.log(`Fetching global product: products/${productId}`);
+    } else if (currentUser) { // Only try to fetch user product if currentUser exists
+      docRef = doc(db, "users", currentUser.uid, "products", productId);
+      console.log(`Fetching user product: users/${currentUser.uid}/products/${productId}`);
+    } else {
+      // Should not happen if !isGlobal && !currentUser check above works, but as a fallback:
+      console.error("Cannot fetch user product: user not logged in.");
+      setLoading(false);
+      setProduct(null);
+      setLocal(null);
+      return;
+    }
+
     getDoc(docRef)
       .then((snap) => {
         if (!snap.exists()) {
-          console.warn("No such product:", productId);
+          console.warn(`Product not found (isGlobal: ${isGlobal}):`, productId);
           setProduct(null);
           setLocal(null);
         } else {
           const data = snap.data();
-          setProduct({ id: snap.id, ...data });
+          setProduct({ id: snap.id, ...data }); // Store original product
           // Initialize local state with Firestore data:
           setLocal({
-            ...(data || {}),
-            // Ensure arrays exist:
+            id: snap.id, // Keep id in local for reference if needed, but don't save it back directly
+            ...data,
             accessories: data.accessories || [],
             fillings: data.fillings || [],
           });
@@ -64,11 +82,13 @@ export default function ProductCatalogEditPage() {
       })
       .catch((err) => {
         console.error("Error fetching product:", err);
+        setProduct(null);
+        setLocal(null);
       })
       .finally(() => {
         setLoading(false);
       });
-  }, [currentUser, productId, navigate]);
+  }, [productId, currentUser, navigate, location.search]);
 
   if (loading) {
     return (
@@ -91,20 +111,10 @@ export default function ProductCatalogEditPage() {
 
   // Helper: update a top‐level field in local state
   const handleChange = (field, value) => {
-    setLocal((prev) => {
-      let processedValue = value;
-      const numericFields = ['quantity', 'unitPrice', 'vat', 'discount'];
-
-      if (numericFields.includes(field)) {
-        if (value === "" || value === null || typeof value === 'undefined') {
-          processedValue = null;
-        } else {
-          const num = parseFloat(value);
-          processedValue = isNaN(num) ? null : num;
-        }
-      }
-      return { ...prev, [field]: processedValue };
-    });
+    setLocal((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   // ACCESSORIES CRUD
@@ -119,16 +129,8 @@ export default function ProductCatalogEditPage() {
   };
   const handleAccessoryChange = (index, field, value) => {
     const updated = [...(local.accessories || [])];
-    if (field === "qty") {
-      if (value === "" || value === null || typeof value === 'undefined') {
-        updated[index][field] = null;
-      } else {
-        const num = parseInt(value, 10); // Qty is likely an integer
-        updated[index][field] = isNaN(num) ? null : num;
-      }
-    } else {
-      updated[index][field] = value;
-    }
+    updated[index][field] =
+      field === "qty" ? Number(value) : value;
     setLocal((prev) => ({ ...prev, accessories: updated }));
   };
   const handleRemoveAccessory = (index) => {
@@ -150,12 +152,7 @@ export default function ProductCatalogEditPage() {
   const handleFillingChange = (index, field, value) => {
     const updated = [...(local.fillings || [])];
     if (field === "price" || field === "discountPercent") {
-      if (value === "" || value === null || typeof value === 'undefined') {
-        updated[index][field] = null;
-      } else {
-        const num = parseFloat(value);
-        updated[index][field] = isNaN(num) ? null : num;
-      }
+      updated[index][field] = Number(value);
     } else {
       updated[index][field] = value;
     }
@@ -169,23 +166,37 @@ export default function ProductCatalogEditPage() {
 
   // Save back to Firestore, then navigate to /products
   const handleSave = async () => {
+    if (!local) {
+      console.error("Local data is not set. Cannot save.");
+      return;
+    }
     setSaving(true);
     try {
-      const docRef = doc(
-        db,
-        "users",
-        currentUser.uid,
-        "products",
-        productId
-      );
-      // Ensure we write serverTimestamp for “updatedAt”
+      let docRef;
+      if (isGlobalProduct) {
+        docRef = doc(db, "products", productId);
+        console.log(`Saving global product: products/${productId}`);
+      } else if (currentUser) {
+        docRef = doc(db, "users", currentUser.uid, "products", productId);
+        console.log(`Saving user product: users/${currentUser.uid}/products/${productId}`);
+      } else {
+        console.error("Cannot save product: user not logged in for user-specific product or path determination error.");
+        setSaving(false);
+        return;
+      }
+
+      // Exclude 'id' from the data to be saved if it's part of 'local' state
+      const { id, ...dataToSave } = local;
+
       await updateDoc(docRef, {
-        ...local,
+        ...dataToSave, // Spread the actual fields of the product
         updatedAt: serverTimestamp(),
       });
-      navigate("/products");
+      // Navigate back to the main catalog page after saving
+      navigate("/catalog");
     } catch (err) {
       console.error("Error saving product:", err);
+      alert("Error saving product: " + err.message); // Show error to user
     } finally {
       setSaving(false);
     }

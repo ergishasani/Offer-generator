@@ -92,7 +92,7 @@ function App() {
             path="/products/:productId/edit"
             element={
               <PrivateRoute>
-                <ProductCatalogEditPage /> {/* Corrected component */}
+                <ProductCatalogEditPage /> {/* Ensure this points to the correct editor */}
               </PrivateRoute>
             }
           />
