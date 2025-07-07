@@ -1032,8 +1032,9 @@ export default function OfferFormPage() {
                 computeLineTotalGross={computeLineTotalGross}
               />
               <div className="preview-inline">
-                <WindowPreview
+                <WindowPrevie
                   ref={(el) => (windowPreviewRefs.current[item.id] = el)}
+
                   widthMm={item.widthMm}
                   heightMm={item.heightMm}
                   svgUrl={item.windowSvgUrl}
@@ -1242,6 +1243,35 @@ export default function OfferFormPage() {
         </div>
       </form>
 
+      {/* Hidden previews for html2canvas */}
+      <div
+        className="preview-cache"
+        style={{ position: "absolute", left: -9999, top: 0, visibility: "hidden" }}
+      >
+        {items.map((item) => (
+
+          <div key={item.id}>
+            <WindowPreview
+              ref={(el) => (windowPreviewRefs.current[item.id] = el)}
+
+
+          <div key={item.id}>
+            <WindowPreview
+              ref={(el) => (windowPreviewRefs.current[item.id] = el)}
+
+          <div
+            key={item.id}
+            ref={(el) => (windowPreviewRefs.current[item.id] = el)}
+          >
+            <WindowPreview
+
+              widthMm={item.widthMm}
+              heightMm={item.heightMm}
+              svgUrl={item.windowSvgUrl}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
