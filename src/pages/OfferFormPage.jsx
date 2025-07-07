@@ -1032,7 +1032,9 @@ export default function OfferFormPage() {
                 computeLineTotalGross={computeLineTotalGross}
               />
               <div className="preview-inline">
-                <WindowPreview
+                <WindowPrevie
+                  ref={(el) => (windowPreviewRefs.current[item.id] = el)}
+
                   widthMm={item.widthMm}
                   heightMm={item.heightMm}
                   svgUrl={item.windowSvgUrl}
