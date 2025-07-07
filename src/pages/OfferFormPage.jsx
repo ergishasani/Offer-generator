@@ -707,7 +707,7 @@ export default function OfferFormPage() {
         cursorY = pdf.lastAutoTable.finalY + 10;
       }
 
-      // 7g) Fenster total
+      // 7g) Window total
       const net = computeLineTotalNet(item);
       const afterGlobal = net * (1 - (parseFloat(totalDiscount) || 0) / 100);
       const vatAmt = useNetPrices
@@ -1247,6 +1247,11 @@ export default function OfferFormPage() {
         style={{ position: "absolute", left: -9999, top: 0, visibility: "hidden" }}
       >
         {items.map((item) => (
+
+          <div key={item.id}>
+            <WindowPreview
+              ref={(el) => (windowPreviewRefs.current[item.id] = el)}
+
 
           <div key={item.id}>
             <WindowPreview
