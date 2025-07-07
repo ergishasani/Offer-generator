@@ -1,19 +1,22 @@
 // src/components/WindowPreview.jsx
-import React from "react";
+import React, { forwardRef } from "react";
 import PropTypes from "prop-types";
 import { ReactComponent as DefaultWindow } from "../assets/window.svg";
 import "../assets/styles/components/_windowPreview.scss";
 
 const MM_TO_PX = 0.5;
 
-export default function WindowPreview({ widthMm, heightMm, svgUrl }) {
+const WindowPreview = forwardRef(function WindowPreview(
+  { widthMm, heightMm, svgUrl },
+  ref
+) {
   const style = {
-    width:  `${widthMm * MM_TO_PX}px`,
-    height: `${heightMm * MM_TO_PX}px`,
+    width: `${Number(widthMm) * MM_TO_PX}px`,
+    height: `${Number(heightMm) * MM_TO_PX}px`,
   };
 
   return (
-    <div className="window-preview" style={style}>
+    <div className="window-preview" style={style} ref={ref}>
       {svgUrl ? (
         <img
           src={svgUrl}
@@ -29,7 +32,9 @@ export default function WindowPreview({ widthMm, heightMm, svgUrl }) {
       )}
     </div>
   );
-}
+});
+
+export default WindowPreview;
 
 WindowPreview.propTypes = {
   widthMm:  PropTypes.number.isRequired,

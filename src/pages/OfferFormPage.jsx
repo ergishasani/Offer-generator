@@ -39,7 +39,7 @@ export default function OfferFormPage() {
   const [contactName, setContactName] = useState("");
   const [addressLine1, setAddressLine1] = useState("");
   const [addressLine2, setAddressLine2] = useState("");
-  const [countryAddr, setCountryAddr] = useState("Deutschland");
+  const [countryAddr, setCountryAddr] = useState("Germany");
   const [regarding, setRegarding] = useState("");
   const [offerNumber, setOfferNumber] = useState("");
   const [offerDate, setOfferDate] = useState(new Date());
@@ -48,7 +48,7 @@ export default function OfferFormPage() {
   );
   const [referenceOrder, setReferenceOrder] = useState("");
   const [headerText, setHeaderText] = useState(
-    "Sehr geehrte Damen und Herren,\n\nvielen Dank für Ihre Anfrage. Gerne unterbreiten wir Ihnen das gewünschte freibleibende Angebot:"
+    "Dear Sir or Madam,\n\nThank you for your inquiry. We are pleased to provide the following non-binding offer:"
   );
 
   // 4) PRODUCTS SECTION STATE
@@ -246,7 +246,7 @@ export default function OfferFormPage() {
 
   // 5) FOOTER TEXT
   const [footerText, setFooterText] = useState(
-    "Für Rückfragen stehen wir Ihnen jederzeit gerne zur Verfügung.\nWir bedanken uns sehr für Ihr Vertrauen.\n\nMit freundlichen Grüßen\n[%KONTAKTPERSON%]"
+    "If you have any questions, please do not hesitate to contact us.\nThank you very much for your trust.\n\nBest regards\n[%CONTACT_PERSON%]"
   );
 
   // 6) MORE OPTIONS STATE
@@ -426,7 +426,7 @@ export default function OfferFormPage() {
 
     // (2) OFFER TITLE & DATES
     pdf.setFontSize(16).setTextColor("#000");
-    pdf.text("Angebot", margin, cursorY);
+    pdf.text("Offer", margin, cursorY);
     pdf.setFontSize(12);
     pdf.text(`Offer No.: ${offerNumber}`, pageWidth - margin - 200, cursorY);
     pdf.text(
@@ -482,8 +482,8 @@ export default function OfferFormPage() {
       "Product or service",
       "Qty",
       "Unit",
-      `Price (${useNetPrices ? "net" : "brutto"})`,
-      "USt.",
+      `Price (${useNetPrices ? "net" : "gross"})`,
+      "VAT",
       "Disc. (%)",
       "Line Total",
     ];
@@ -556,10 +556,10 @@ export default function OfferFormPage() {
       pdf.rect(margin, cursorY, pageWidth - 2 * margin, boxH, "FD");
       pdf.setFontSize(10).setTextColor("#000");
       const segW = (pageWidth - 2 * margin) / 4;
-      pdf.text(`Fenster 00${idx + 1}`, margin + 4, cursorY + 13);
-      pdf.text(`Menge: ${item.quantity}`, margin + segW + 4, cursorY + 13);
+      pdf.text(`Window 00${idx + 1}`, margin + 4, cursorY + 13);
+      pdf.text(`Qty: ${item.quantity}`, margin + segW + 4, cursorY + 13);
       pdf.text(`System: ${item.system}`, margin + segW * 2 + 4, cursorY + 13);
-      pdf.text(`Farbe: ${item.colorOuter}`, margin + segW * 3 + 4, cursorY + 13);
+      pdf.text(`Color: ${item.colorOuter}`, margin + segW * 3 + 4, cursorY + 13);
       cursorY += boxH + 8;
 
       // 7b) window preview PNG on right
@@ -612,27 +612,27 @@ export default function OfferFormPage() {
 
       // 7d) Frame details table
       const frameRows = [
-        ["Rahmen", item.frameType],
-        ["Außen Farbe", item.colorOuter],
-        ["Innen Farbe", item.colorInner],
-        ["Maße", item.frameDimensions],
-        ["Furnierfarbe des Rahmens", item.frameVeneerColor],
-        ["Furnierfarbe des Flügels", item.sashVeneerColor],
-        ["Farbe des Kerns + Dichtung (Rahmen)", item.coreSealFrame],
-        ["Farbe des Kerns + Dichtung (Flügel)", item.coreSealSash],
-        ["Schwellentyp HST", item.thresholdType],
-        ["Verschweißungsart", item.weldingType],
+        ["Frame", item.frameType],
+        ["Color outside", item.colorOuter],
+        ["Color inside", item.colorInner],
+        ["Dimensions", item.frameDimensions],
+        ["Frame veneer color", item.frameVeneerColor],
+        ["Sash veneer color", item.sashVeneerColor],
+        ["Core/seal color (frame)", item.coreSealFrame],
+        ["Core/seal color (sash)", item.coreSealSash],
+        ["Threshold type HST", item.thresholdType],
+        ["Welding type", item.weldingType],
         ["Glazing required", item.glazing],
-        ["Glasleiste", item.glassHold],
-        ["Flügel", item.sashType],
-        ["Beschlag", item.fitting],
-        ["  Beschlagsart", item.fittingType],
-        ["  Olive (innen)", item.handleTypeInner],
-        ["  Drückerfarbe innen", item.handleColorInner],
-        ["  Grifffarbe außen", item.handleColorOuter],
-        ["Wärmekoeffizient", item.UwCoefficient],
-        ["Gewichtseinheit", item.weightUnit],
-        ["Umrandung", item.perimeter],
+        ["Glass bead", item.glassHold],
+        ["Sash", item.sashType],
+        ["Hardware", item.fitting],
+        ["  Hardware type", item.fittingType],
+        ["  Handle type inside", item.handleTypeInner],
+        ["  Handle color inside", item.handleColorInner],
+        ["  Handle color outside", item.handleColorOuter],
+        ["Uw coefficient", item.UwCoefficient],
+        ["Weight unit", item.weightUnit],
+        ["Perimeter", item.perimeter],
       ];
       autoTable(pdf, {
         startY: cursorY,
@@ -657,7 +657,7 @@ export default function OfferFormPage() {
         autoTable(pdf, {
           startY: cursorY,
           margin: { left: margin, right: margin },
-          head: [["Zubehör", "Menge"]],
+          head: [["Accessories", "Qty"]],
           body: accRows,
           headStyles: { fillColor: "#F0F8FF", textColor: "#333", fontSize: 9 },
           bodyStyles: { fontSize: 9, textColor: "#333" },
@@ -688,7 +688,7 @@ export default function OfferFormPage() {
         autoTable(pdf, {
           startY: cursorY,
           margin: { left: margin, right: margin },
-          head: [["ID", "Füllung", "Maße", "Netto Preis", "Disc %", "Rabatt", "Summe"]],
+          head: [["ID", "Filling", "Dimensions", "Net Price", "Disc %", "Discount", "Total"]],
           body: fillRows,
           headStyles: { fillColor: "#E6E6FA", textColor: "#333", fontSize: 8 },
           bodyStyles: { fontSize: 8, textColor: "#333" },
@@ -717,9 +717,7 @@ export default function OfferFormPage() {
 
       pdf.setFontSize(10).setFont(undefined, "bold");
       pdf.text(
-        `Fenster total: ${afterGlobal.toFixed(2)} €  +USt ${vatAmt.toFixed(
-          2
-        )} €  = ${grand.toFixed(2)} €`,
+        `Window total: ${afterGlobal.toFixed(2)} €  +VAT ${vatAmt.toFixed(2)} €  = ${grand.toFixed(2)} €`,
         margin,
         cursorY
       );
@@ -791,14 +789,14 @@ export default function OfferFormPage() {
     pdf.text(`VAT Option: ${vatLine}`, margin, cursorY);
 
     // (11) SAVE PDF
-    pdf.save(`Angebot-${offerNumber || "new"}.pdf`);
+    pdf.save(`Offer-${offerNumber || "new"}.pdf`);
   };
 
   // 9) FORM SUBMIT HANDLER
   const handleSubmitForm = async (e) => {
     e.preventDefault();
     if (!contactName.trim() || !offerNumber.trim()) {
-      alert("Bitte Kontaktname und Angebotsnummer angeben.");
+      alert("Please provide a contact name and offer number.");
       return;
     }
     const validItems = items.filter(
@@ -809,7 +807,7 @@ export default function OfferFormPage() {
     );
     if (validItems.length === 0) {
       alert(
-        "Bitte mindestens ein Produkt auswählen, mit Menge > 0 und gültigem Preis eingeben."
+        "Please select at least one product with quantity > 0 and a valid price."
       );
       return;
     }
@@ -884,21 +882,21 @@ export default function OfferFormPage() {
               <textarea
                 className="textarea full-width"
                 rows={2}
-                placeholder="Straße und Hausnummer"
+                placeholder="Street and number"
                 value={addressLine1}
                 onChange={(e) => setAddressLine1(e.target.value)}
               />
               <textarea
                 className="textarea full-width"
                 rows={1}
-                placeholder="PLZ Ort"
+                placeholder="ZIP City"
                 value={addressLine2}
                 onChange={(e) => setAddressLine2(e.target.value)}
               />
               <input
                 type="text"
                 className="input full-width"
-                placeholder="Land"
+                placeholder="Country"
                 value={countryAddr}
                 onChange={(e) => setCountryAddr(e.target.value)}
               />
@@ -910,7 +908,7 @@ export default function OfferFormPage() {
               <input
                 type="text"
                 className="input full-width"
-                placeholder="Angebot AN-1109"
+                placeholder="Offer AN-1109"
                 value={regarding}
                 onChange={(e) => setRegarding(e.target.value)}
               />
@@ -1011,9 +1009,9 @@ export default function OfferFormPage() {
             <div className="col col-qty">Qty</div>
             <div className="col col-unit">Unit</div>
             <div className="col col-price">
-              Price ({useNetPrices ? "net" : "brutto"})
+              Price ({useNetPrices ? "net" : "gross"})
             </div>
-            <div className="col col-vat">USt.</div>
+            <div className="col col-vat">VAT</div>
             <div className="col col-discount">Disc. (%)</div>
             <div className="col col-amount">Amount</div>
             <div className="col col-action"></div>
@@ -1150,7 +1148,7 @@ export default function OfferFormPage() {
                   <input
                     type="text"
                     className="input full-width"
-                    placeholder="z. B. Rivaldo Dini"
+                    placeholder="e.g. Rivaldo Dini"
                     value={internalContact}
                     onChange={(e) => setInternalContact(e.target.value)}
                   />
@@ -1249,11 +1247,17 @@ export default function OfferFormPage() {
         style={{ position: "absolute", left: -9999, top: 0, visibility: "hidden" }}
       >
         {items.map((item) => (
+
+          <div key={item.id}>
+            <WindowPreview
+              ref={(el) => (windowPreviewRefs.current[item.id] = el)}
+
           <div
             key={item.id}
             ref={(el) => (windowPreviewRefs.current[item.id] = el)}
           >
             <WindowPreview
+
               widthMm={item.widthMm}
               heightMm={item.heightMm}
               svgUrl={item.windowSvgUrl}
