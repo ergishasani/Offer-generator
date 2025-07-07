@@ -1247,9 +1247,17 @@ export default function OfferFormPage() {
         style={{ position: "absolute", left: -9999, top: 0, visibility: "hidden" }}
       >
         {items.map((item) => (
+
           <div key={item.id}>
             <WindowPreview
               ref={(el) => (windowPreviewRefs.current[item.id] = el)}
+
+          <div
+            key={item.id}
+            ref={(el) => (windowPreviewRefs.current[item.id] = el)}
+          >
+            <WindowPreview
+
               widthMm={item.widthMm}
               heightMm={item.heightMm}
               svgUrl={item.windowSvgUrl}
