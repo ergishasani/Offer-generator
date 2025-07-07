@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import DatePicker from "react-datepicker";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -8,6 +8,8 @@ import { doc, getDoc, collection, onSnapshot } from "firebase/firestore";
 
 import ProductRow from "../components/ProductRow";
 import NavBar from "../components/NavBar";
+import WindowPreview from "../components/WindowPreview";
+import html2canvas from "html2canvas";
 
 import "react-datepicker/dist/react-datepicker.css";
 import "../assets/styles/pages/_offerFormPage.scss";
@@ -138,6 +140,9 @@ export default function OfferFormPage() {
       return sum + afterGlobal * (rate / 100);
     }, 0);
   };
+
+  // Refs to WindowPreview elements for html2canvas captures
+  const windowPreviewRefs = useRef({});
 
   // 4b) ADD / REMOVE / CHANGE ITEM
   const handleAddItem = () =>
@@ -367,6 +372,20 @@ export default function OfferFormPage() {
     const margin = 40;
     let cursorY = 40;
 
+    // Capture window previews as PNGs
+    const previewImages = {};
+    for (const item of items) {
+      const node = windowPreviewRefs.current[item.id];
+      if (node) {
+        try {
+          const canvas = await html2canvas(node, { backgroundColor: null });
+          previewImages[item.id] = canvas.toDataURL("image/png");
+        } catch (err) {
+          console.warn("Could not capture preview for item", item.id, err);
+        }
+      }
+    }
+
     // (1) COMPANY HEADER
     if (companyProfile.logoUrl) {
       pdf.setFontSize(18).setTextColor("#000");
@@ -543,29 +562,23 @@ export default function OfferFormPage() {
       pdf.text(`Farbe: ${item.colorOuter}`, margin + segW * 3 + 4, cursorY + 13);
       cursorY += boxH + 8;
 
-      // 7b) window.svg preview on right
+      // 7b) window preview PNG on right
       let previewH = 0;
-      if (item.windowSvgUrl && item.widthMm > 0 && item.heightMm > 0) {
+      if (previewImages[item.id] && item.widthMm > 0 && item.heightMm > 0) {
         const previewW = 80; // pts
         const aspectRatio = item.heightMm / item.widthMm || 1;
         previewH = previewW * aspectRatio;
         try {
-          // fetch per-item SVG
-          const resSvg = await fetch(item.windowSvgUrl);
-          const svgText = await resSvg.text();
-          const dataUri =
-            "data:image/svg+xml;base64," +
-            btoa(unescape(encodeURIComponent(svgText)));
           pdf.addImage(
-            dataUri,
-            "SVG",
+            previewImages[item.id],
+            "PNG",
             pageWidth - margin - previewW,
             cursorY,
             previewW,
             previewH
           );
         } catch (err) {
-          console.warn("Could not render window.svg preview:", err);
+          console.warn("Could not render window preview:", err);
         }
       }
 
@@ -1008,18 +1021,26 @@ export default function OfferFormPage() {
 
           {/* Item Rows */}
           {items.map((item, idx) => (
-            <ProductRow
-              key={item.id}
-              item={item}
-              index={idx}
-              productCatalog={catalogProducts}
-              useNetPrices={useNetPrices}
-              totalDiscount={totalDiscount}
-              onChange={handleItemChange}
-              onRemove={handleRemoveItem}
-              computeLineTotalNet={computeLineTotalNet}
-              computeLineTotalGross={computeLineTotalGross}
-            />
+            <React.Fragment key={item.id}>
+              <ProductRow
+                item={item}
+                index={idx}
+                productCatalog={catalogProducts}
+                useNetPrices={useNetPrices}
+                totalDiscount={totalDiscount}
+                onChange={handleItemChange}
+                onRemove={handleRemoveItem}
+                computeLineTotalNet={computeLineTotalNet}
+                computeLineTotalGross={computeLineTotalGross}
+              />
+              <div className="preview-inline">
+                <WindowPreview
+                  widthMm={item.widthMm}
+                  heightMm={item.heightMm}
+                  svgUrl={item.windowSvgUrl}
+                />
+              </div>
+            </React.Fragment>
           ))}
 
           {/* Footer Links */}
@@ -1221,6 +1242,25 @@ export default function OfferFormPage() {
           </button>
         </div>
       </form>
+
+      {/* Hidden previews for html2canvas */}
+      <div
+        className="preview-cache"
+        style={{ position: "absolute", left: -9999, top: 0, visibility: "hidden" }}
+      >
+        {items.map((item) => (
+          <div
+            key={item.id}
+            ref={(el) => (windowPreviewRefs.current[item.id] = el)}
+          >
+            <WindowPreview
+              widthMm={item.widthMm}
+              heightMm={item.heightMm}
+              svgUrl={item.windowSvgUrl}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
